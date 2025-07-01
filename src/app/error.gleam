@@ -2,7 +2,7 @@ import gleam/list
 
 pub type AppError {
   ProductValidation(
-    name: List(String),
+    title: List(String),
     quantity: List(String),
     urgent: List(String),
   )

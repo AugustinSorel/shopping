@@ -1,7 +1,8 @@
+import pog
 import wisp
 
 pub type Ctx {
-  Ctx(static_dir: String)
+  Ctx(static_dir: String, db: pog.Connection)
 }
 
 pub fn middleware(

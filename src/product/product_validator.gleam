@@ -2,26 +2,26 @@ import app/validator
 import valid
 
 pub type Product {
-  Product(name: String, quantity: Int, urgent: Bool)
+  Product(title: String, quantity: Int, urgent: Bool)
 }
 
 pub type Fields {
-  Name
+  Title
   Quantity
   Urgent
 }
 
 fn name_validator() {
-  valid.string_is_not_empty(#(Name, "Name is required"))
+  valid.string_is_not_empty(#(Title, "Title is required"))
   |> valid.then(
     valid.string_min_length(3, #(
-      Name,
+      Title,
       "product name must be at least 3 characters",
     )),
   )
   |> valid.then(
     valid.string_max_length(255, #(
-      Name,
+      Title,
       "product name must be at most 255 characters",
     )),
   )
@@ -42,9 +42,9 @@ pub type Create {
 }
 
 pub fn create_product(input: Create) {
-  use name <- valid.check(input.name, name_validator())
+  use title <- valid.check(input.name, name_validator())
   use quantity <- valid.check(input.quantity, quantity_validator())
   use urgent <- valid.check(input.urgent, urgent_validator())
 
-  valid.ok(Product(name:, quantity:, urgent:))
+  valid.ok(Product(title:, quantity:, urgent:))
 }

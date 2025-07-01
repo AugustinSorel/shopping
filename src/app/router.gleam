@@ -9,7 +9,7 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
   case wisp.path_segments(req) {
     [] -> wisp.redirect(to: "/products")
 
-    ["products"] -> products(req)
+    ["products"] -> products(req, ctx)
 
     ["products", "create"] -> products_create(req)
 
@@ -25,9 +25,9 @@ fn products_create(req: wisp.Request) -> wisp.Response {
   }
 }
 
-fn products(req: wisp.Request) -> wisp.Response {
+fn products(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
   case req.method {
-    http.Get -> product_handler.by_purchased_status()
+    http.Get -> product_handler.by_purchased_status(ctx)
     http.Post -> product_handler.create(req)
 
     _ -> wisp.method_not_allowed([http.Get, http.Post])

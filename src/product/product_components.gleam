@@ -1,7 +1,9 @@
+import gleam/list
 import gleam/option
 import lustre/attribute
 import lustre/element
 import lustre/element/html
+import product/product_model
 
 pub type CreateProductInput {
   CreateProductInput(
@@ -31,14 +33,14 @@ pub fn create_form(
       attribute.class("flex flex-col"),
     ],
     [
-      html.label([attribute.class(""), attribute.for("name")], [
-        html.text("name:"),
+      html.label([attribute.class(""), attribute.for("title")], [
+        html.text("title:"),
       ]),
       html.input([
-        attribute.placeholder("name"),
+        attribute.placeholder("title"),
         attribute.type_("text"),
-        attribute.name("name"),
-        attribute.id("name"),
+        attribute.name("title"),
+        attribute.id("title"),
         case values {
           option.Some(CreateProductInput(name: option.Some(name), ..)) -> {
             attribute.value(name)
@@ -105,15 +107,30 @@ pub fn create_form(
   )
 }
 
-pub fn by_purchased_status() {
+pub fn by_purchased_status(
+  products_purchased: List(product_model.Product),
+  products_unpurchased: List(product_model.Product),
+) {
   html.main([], [
     html.section([], [
       html.h2([], [html.text("à acheter")]),
-      html.ol([], [html.li([], [html.text("...")])]),
+      html.ol(
+        [],
+        list.map(products_unpurchased, fn(p) {
+          html.li([], [html.text(p.title)])
+        }),
+      ),
     ]),
     html.section([], [
       html.h2([], [html.text("acheté")]),
-      html.ol([], [html.li([], [html.text("...")])]),
+      html.ol([], [
+        html.li(
+          [],
+          list.map(products_purchased, fn(p) {
+            html.li([], [html.text(p.title)])
+          }),
+        ),
+      ]),
     ]),
     html.a([attribute.href("/products/create")], [html.text("create product")]),
   ])
