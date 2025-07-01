@@ -1,0 +1,31 @@
+import lustre/attribute
+import lustre/element.{type Element}
+import lustre/element/html
+
+pub fn component(children: List(Element(msg))) {
+  html.html([attribute.lang("en")], [
+    html.head([], [
+      html.meta([attribute.charset("utf-8")]),
+      html.meta([
+        attribute.name("viewport"),
+        attribute.content("width=device-width, initial-scale=1"),
+      ]),
+      html.script(
+        [
+          attribute.src(
+            "https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js",
+          ),
+        ],
+        "",
+      ),
+      html.meta([
+        attribute.name("htmx-config"),
+        attribute.content(
+          "{\"responseHandling\": [{\"code\":\"...\", \"swap\": true}]}",
+        ),
+      ]),
+      html.title([], "shopping"),
+    ]),
+    html.body([], children),
+  ])
+}
