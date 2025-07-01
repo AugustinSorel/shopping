@@ -12,14 +12,36 @@
     in
     {
       devShells.${system} = {
-        default = pkgs.mkShell
-          {
-            buildInputs = with pkgs;[
-              gleam
-              erlang_28
-              beamMinimal27Packages.rebar3
-            ];
-          };
+        default =
+          let
+            server-watch = pkgs.writeShellScriptBin "server_watch" ''
+              templ generate --watch --proxy="http://localhost:8080" --cmd="go run ./cmd/api/main.go"
+            '';
+
+            styles-watch = pkgs.writeShellScriptBin "styles_watch" ''
+              tailwindcss -i ./src/styles/styles.css -o ./priv/static/styles.css --watch
+            '';
+
+            db-cli = pkgs.writeShellScriptBin "db_cli" ''
+              docker exec -it shopping_plo_plo_db bash -c "psql -U postgres -d shopping_plo_plo"
+            '';
+          in
+
+          pkgs.mkShell
+            {
+              buildInputs = with pkgs;[
+                gleam
+                erlang_28
+                beamMinimal27Packages.rebar3
+                tailwindcss_4
+                watchman
+                goose
+
+                server-watch
+                styles-watch
+                db-cli
+              ];
+            };
       };
     };
 }

@@ -18,6 +18,10 @@ pub fn component(children: List(Element(msg))) {
         ],
         "",
       ),
+      html.link([
+        attribute.href("/static/styles.css"),
+        attribute.rel("stylesheet"),
+      ]),
       html.meta([
         attribute.name("htmx-config"),
         attribute.content(

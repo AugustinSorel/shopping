@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: var(--surface);
+  --color-on-surface: var(--on-surface);
+
+  --color-surface-variant: var(--surface-variant);
+  --color-on-surface-variant: var(--on-surface-variant);
+
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+
+  --color-outline: var(--outline);
+
+  --max-width-app: var(--container-xl);
+  --width-app: var(--container-xl);
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  :root {
+    --surface: light-dark(hsl(0 0% 97%), hsl(0 0% 6%));
+    --on-surface: light-dark(hsl(0 0% 4%), hsl(0 0% 96%));
+
+    --surface-variant: light-dark(hsl(275 24% 90%), hsl(264 7% 29%));
+    --on-surface-variant: light-dark(hsl(264 7% 29%), hsl(270 11% 79%));
+
+    --surface-container-lowest: light-dark(hsl(0 0% 100%), hsl(0 0% 10%));
+    --surface-container-low: light-dark(hsl(0 0% 96%), hsl(0 0% 14%));
+    --surface-container: light-dark(hsl(0 0% 94%), hsl(0 0% 17%));
+    --surface-container-high: light-dark(hsl(0 0% 92%), hsl(0 0% 22%));
+    --surface-container-highest: light-dark(hsl(0 0% 90%), hsl(0 0% 28%));
+
+    --primary: light-dark(hsl(256 34% 48%), hsl(258 100% 87%));
+    --on-primary: light-dark(hsl(0 0% 100%), hsl(259 58% 28%));
+    --primary-container: light-dark(hsl(263 100% 93%), hsl(257 43% 38%));
+    --on-primary-container: light-dark(hsl(257 43% 38%), hsl(263 100% 93%));
+
+    --secondary: light-dark(hsl(259 11% 40%), hsl(263 27% 81%));
+    --on-secondary: light-dark(hsl(0 0% 100%), hsl(258 18% 22%));
+    --secondary-container: light-dark(hsl(263 65% 92%), hsl(258 13% 31%));
+    --on-secondary-container: light-dark(hsl(258 13% 31%), hsl(263 65% 92%));
+
+    --error: light-dark(hsl(3 71% 41%), hsl(3 70% 83%));
+    --on-error: light-dark(hsl(0 0% 100%), hsl(3 71% 22%));
+    --error-container: light-dark(hsl(4 71% 92%), hsl(3 71% 32%));
+    --on-error-container: light-dark(hsl(3 71% 32%), hsl(4 71% 92%));
+
+    --outline: light-dark(hsl(270 4% 47%), hsl(264 5% 58%));
+  }
+}
+
+@layer components {
+  .htmx-indicator {
+    display: none;
+  }
+  .htmx-request .htmx-indicator {
+    display: inline;
+  }
+  .htmx-request.htmx-indicator {
+    display: inline;
+  }
+}

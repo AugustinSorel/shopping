@@ -28,12 +28,17 @@ pub fn create_form(
     [
       attribute.attribute("hx-post", "/products"),
       attribute.attribute("hx-target", "this"),
+      attribute.class("flex flex-col"),
     ],
     [
+      html.label([attribute.class(""), attribute.for("name")], [
+        html.text("name:"),
+      ]),
       html.input([
         attribute.placeholder("name"),
         attribute.type_("text"),
         attribute.name("name"),
+        attribute.id("name"),
         case values {
           option.Some(CreateProductInput(name: option.Some(name), ..)) -> {
             attribute.value(name)
@@ -47,10 +52,14 @@ pub fn create_form(
         }
         _ -> element.none()
       },
+      html.label([attribute.class(""), attribute.for("quantity")], [
+        html.text("quantity:"),
+      ]),
       html.input([
         attribute.placeholder("quantity"),
         attribute.type_("number"),
         attribute.name("quantity"),
+        attribute.id("quantity"),
         case values {
           option.Some(CreateProductInput(quantity: option.Some(quantity), ..)) -> {
             attribute.value(quantity)
@@ -64,9 +73,13 @@ pub fn create_form(
         }
         _ -> element.none()
       },
+      html.label([attribute.class(""), attribute.for("urgent")], [
+        html.text("urgent:"),
+      ]),
       html.input([
         attribute.placeholder("urgent"),
         attribute.name("urgent"),
+        attribute.id("urgent"),
         attribute.type_("checkbox"),
         case values {
           option.Some(CreateProductInput(urgent: option.Some("on"), ..)) -> {

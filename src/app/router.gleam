@@ -1,9 +1,10 @@
+import app/web
 import gleam/http
 import product/product_handler
 import wisp
 
-pub fn handle_request(req: wisp.Request) -> wisp.Response {
-  use req <- middleware(req)
+pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
+  use req <- web.middleware(req, ctx)
 
   case wisp.path_segments(req) {
     [] -> wisp.redirect(to: "/products")
@@ -31,17 +32,4 @@ fn products(req: wisp.Request) -> wisp.Response {
 
     _ -> wisp.method_not_allowed([http.Get, http.Post])
   }
-}
-
-fn middleware(
-  req: wisp.Request,
-  handle_request: fn(wisp.Request) -> wisp.Response,
-) -> wisp.Response {
-  let req = wisp.method_override(req)
-
-  use <- wisp.log_request(req)
-  use <- wisp.rescue_crashes
-  use req <- wisp.handle_head(req)
-
-  handle_request(req)
 }
