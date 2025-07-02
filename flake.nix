@@ -32,6 +32,7 @@
               buildInputs = with pkgs;[
                 gleam
                 erlang_28
+                elixir
                 beamMinimal27Packages.rebar3
                 tailwindcss_4
                 watchman

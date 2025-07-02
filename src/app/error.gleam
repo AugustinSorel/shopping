@@ -1,19 +1,26 @@
 import gleam/list
+import gleam/option
 
 pub type AppError {
   ProductValidation(
-    title: List(String),
-    quantity: List(String),
-    urgent: List(String),
+    title: option.Option(List(String)),
+    quantity: option.Option(List(String)),
+    urgent: option.Option(List(String)),
   )
 }
 
-pub fn messages_for(field: a, errors: List(#(a, b))) -> List(b) {
-  errors
-  |> list.filter_map(fn(e) {
-    case e {
-      #(f, msg) if f == field -> Ok(msg)
-      _ -> Error(Nil)
-    }
-  })
+pub fn messages_for(field: a, errors: List(#(a, b))) -> option.Option(List(b)) {
+  let errors = {
+    list.filter_map(errors, fn(e) {
+      case e {
+        #(f, msg) if f == field -> Ok(msg)
+        _ -> Error(Nil)
+      }
+    })
+  }
+
+  case errors {
+    [] -> option.None
+    _ -> option.Some(errors)
+  }
 }

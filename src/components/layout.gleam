@@ -30,6 +30,9 @@ pub fn component(children: List(Element(msg))) {
       ]),
       html.title([], "shopping"),
     ]),
-    html.body([], children),
+    html.body(
+      [attribute.class("bg-surface text-on-surface mb-24 p-4")],
+      children,
+    ),
   ])
 }

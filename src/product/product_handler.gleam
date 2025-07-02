@@ -75,9 +75,9 @@ pub fn create(req: wisp.Request) {
       let errors = {
         product_components.CreateProductErrors(
           root: option.None,
-          name: option.Some(name),
-          quantity: option.Some(quantity),
-          urgent: option.Some(urgent),
+          name: name,
+          quantity: quantity,
+          urgent: urgent,
         )
       }
 
@@ -96,16 +96,8 @@ pub fn create(req: wisp.Request) {
   }
 }
 
-pub fn create_form() {
-  let input = {
-    product_components.CreateProductInput(
-      name: option.None,
-      quantity: option.Some("1"),
-      urgent: option.None,
-    )
-  }
-
-  [product_components.create_form(option.Some(input), option.None)]
+pub fn create_page() {
+  [product_components.create_page()]
   |> layout.component()
   |> element.to_document_string_tree
   |> wisp.html_response(wisp.ok().status)

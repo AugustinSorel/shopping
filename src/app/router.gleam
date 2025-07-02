@@ -19,7 +19,7 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
 fn products_create(req: wisp.Request) -> wisp.Response {
   case req.method {
-    http.Get -> product_handler.create_form()
+    http.Get -> product_handler.create_page()
 
     _ -> wisp.method_not_allowed([http.Get])
   }
