@@ -31,8 +31,7 @@ pub fn by_purchased_status_page(ctx: web.Ctx) {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
     }
-    Error(e) -> {
-      echo e
+    Error(_e) -> {
       wisp.internal_server_error()
     }
   }

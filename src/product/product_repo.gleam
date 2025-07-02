@@ -39,8 +39,8 @@ pub fn get_all(db: pog.Connection) {
     Ok(pog.Returned(_rows, products)) -> {
       Ok(products)
     }
-    Error(err) -> {
-      Error(err)
+    Error(_e) -> {
+      Error(error.Internal)
     }
   }
 }
