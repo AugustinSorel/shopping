@@ -12,6 +12,7 @@ pub type CreateProductInput {
   CreateProductInput(
     name: option.Option(String),
     quantity: option.Option(String),
+    location: option.Option(String),
     urgent: option.Option(String),
   )
 }
@@ -21,6 +22,7 @@ pub type CreateProductErrors {
     root: option.Option(String),
     name: option.Option(List(String)),
     quantity: option.Option(List(String)),
+    location: option.Option(List(String)),
     urgent: option.Option(List(String)),
   )
 }
@@ -29,6 +31,7 @@ pub fn create_page() {
   let values = {
     CreateProductInput(
       name: option.None,
+      location: option.None,
       quantity: option.Some("1"),
       urgent: option.None,
     )
@@ -48,10 +51,31 @@ pub fn create_form(
   errors: option.Option(CreateProductErrors),
 ) {
   let details_open = case errors {
-    option.Some(CreateProductErrors(_root, _title, option.Some(_qty), _urgent)) -> {
+    option.Some(CreateProductErrors(
+      _root,
+      _title,
+      option.Some(_qty),
+      _location,
+      _urgent,
+    )) -> {
       True
     }
-    option.Some(CreateProductErrors(_root, _title, _qty, option.Some(_urgent))) -> {
+    option.Some(CreateProductErrors(
+      _root,
+      _title,
+      _qty,
+      option.Some(_location),
+      _urgent,
+    )) -> {
+      True
+    }
+    option.Some(CreateProductErrors(
+      _root,
+      _title,
+      _qty,
+      _location,
+      option.Some(_urgent),
+    )) -> {
       True
     }
     _ -> False
@@ -73,7 +97,6 @@ pub fn create_form(
           attribute.placeholder("title"),
           attribute.type_("text"),
           attribute.name("title"),
-          attribute.id("title"),
           case values {
             option.Some(CreateProductInput(name: option.Some(name), ..)) -> {
               attribute.value(name)
@@ -111,7 +134,6 @@ pub fn create_form(
               attribute.placeholder("quantity"),
               attribute.type_("number"),
               attribute.name("quantity"),
-              attribute.id("quantity"),
               case values {
                 option.Some(CreateProductInput(
                   quantity: option.Some(quantity),
@@ -125,6 +147,41 @@ pub fn create_form(
             case errors {
               option.Some(CreateProductErrors(
                 quantity: option.Some([e, ..]),
+                ..,
+              )) -> {
+                html.p(
+                  [
+                    attribute.class(
+                      "text-error text-sm first-letter:capitalize",
+                    ),
+                  ],
+                  [html.text(e)],
+                )
+              }
+              _ -> element.none()
+            },
+          ]),
+          html.label([attribute.class("flex flex-col gap-1")], [
+            html.span([attribute.class("first-letter:capitalize")], [
+              html.text("location:"),
+            ]),
+            input.component([
+              attribute.placeholder("location"),
+              attribute.type_("string"),
+              attribute.name("location"),
+              case values {
+                option.Some(CreateProductInput(
+                  location: option.Some(location),
+                  ..,
+                )) -> {
+                  attribute.value(location)
+                }
+                _ -> attribute.none()
+              },
+            ]),
+            case errors {
+              option.Some(CreateProductErrors(
+                location: option.Some([e, ..]),
                 ..,
               )) -> {
                 html.p(

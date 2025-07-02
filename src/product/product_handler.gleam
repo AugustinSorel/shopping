@@ -11,7 +11,7 @@ import product/product_validator
 import valid
 import wisp
 
-pub fn by_purchased_status(ctx: web.Ctx) {
+pub fn by_purchased_status_page(ctx: web.Ctx) {
   let result = {
     use products <- result.try(product_repo.get_all(ctx.db))
 
@@ -31,7 +31,8 @@ pub fn by_purchased_status(ctx: web.Ctx) {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
     }
-    Error(_) -> {
+    Error(e) -> {
+      echo e
       wisp.internal_server_error()
     }
   }
@@ -44,9 +45,12 @@ pub fn create(req: wisp.Request) {
     product_validator.Create(
       name: list.key_find(formdata.values, "title") |> result.unwrap(""),
       quantity: list.key_find(formdata.values, "quantity") |> result.unwrap("1"),
+      location: list.key_find(formdata.values, "location") |> option.from_result,
       urgent: list.key_find(formdata.values, "urgent") |> result.unwrap("off"),
     )
   }
+
+  echo input
 
   let result = {
     let product_valiator = {
@@ -56,6 +60,7 @@ pub fn create(req: wisp.Request) {
         error.ProductValidation(
           title: error.messages_for(product_validator.Title, errors),
           quantity: error.messages_for(product_validator.Quantity, errors),
+          location: error.messages_for(product_validator.Location, errors),
           urgent: error.messages_for(product_validator.Urgent, errors),
         )
       })
@@ -71,13 +76,14 @@ pub fn create(req: wisp.Request) {
       wisp.created()
       |> wisp.set_header("hx-redirect", "/products")
     }
-    Error(error.ProductValidation(name, quantity, urgent)) -> {
+    Error(error.ProductValidation(name, quantity, location, urgent)) -> {
       let errors = {
         product_components.CreateProductErrors(
           root: option.None,
-          name: name,
-          quantity: quantity,
-          urgent: urgent,
+          name:,
+          quantity:,
+          location:,
+          urgent:,
         )
       }
 
@@ -85,6 +91,7 @@ pub fn create(req: wisp.Request) {
         product_components.CreateProductInput(
           name: option.Some(input.name),
           quantity: option.Some(input.quantity),
+          location: input.location,
           urgent: option.Some(input.urgent),
         )
       }

@@ -5,6 +5,7 @@ pub type AppError {
   ProductValidation(
     title: option.Option(List(String)),
     quantity: option.Option(List(String)),
+    location: option.Option(List(String)),
     urgent: option.Option(List(String)),
   )
 }
