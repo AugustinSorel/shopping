@@ -277,7 +277,7 @@ pub fn by_purchased_status(
             "divide-y divide-surface-container-highest bg-surface-container-lowest rounded-3xl overflow-hidden opacity-50",
           ),
         ],
-        [html.li([], list.map(products_purchased, fn(p) { item(p) }))],
+        list.map(products_purchased, fn(p) { item(p) }),
       ),
     ]),
   ])
