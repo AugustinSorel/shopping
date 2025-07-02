@@ -6,7 +6,7 @@ pub type Product {
     id: Int,
     title: String,
     quantity: Int,
-    bought_at: option.Option(Int),
+    bought_at: option.Option(pog.Timestamp),
     created_at: pog.Timestamp,
     updated_at: pog.Timestamp,
   )
