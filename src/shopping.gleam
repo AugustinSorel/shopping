@@ -18,9 +18,7 @@ pub fn main() -> Nil {
     |> pog.pool_size(15)
     |> pog.connect
 
-  let static_dir = web.get_static_dir_path()
-
-  let ctx = web.Ctx(static_dir:, db:)
+  let ctx = web.Ctx(db:)
 
   let secret = wisp.random_string(64)
 

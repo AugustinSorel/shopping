@@ -4,7 +4,7 @@ import product/product_handler
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  use req <- web.middleware(req, ctx)
+  use req <- web.middleware(req)
 
   case wisp.path_segments(req) {
     [] -> wisp.redirect(to: "/products")
