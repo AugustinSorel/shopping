@@ -55,31 +55,13 @@ pub fn create_form(
   errors: option.Option(CreateProductErrors),
 ) {
   let details_open = case errors {
-    option.Some(CreateProductErrors(
-      _root,
-      _title,
-      option.Some(_qty),
-      _location,
-      _urgent,
-    )) -> {
+    option.Some(CreateProductErrors(quantity: option.Some(_), ..)) -> {
       True
     }
-    option.Some(CreateProductErrors(
-      _root,
-      _title,
-      _qty,
-      option.Some(_location),
-      _urgent,
-    )) -> {
+    option.Some(CreateProductErrors(location: option.Some(_), ..)) -> {
       True
     }
-    option.Some(CreateProductErrors(
-      _root,
-      _title,
-      _qty,
-      _location,
-      option.Some(_urgent),
-    )) -> {
+    option.Some(CreateProductErrors(urgent: option.Some(_), ..)) -> {
       True
     }
     _ -> False
