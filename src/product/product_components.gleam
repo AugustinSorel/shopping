@@ -1,12 +1,16 @@
 import components/button
 import components/checkbox
 import components/input
+import gleam/int
 import gleam/list
 import gleam/option
+import gleam/result
+import gleam/string
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import product/product_model
+import user/user_components
 
 pub type CreateProductInput {
   CreateProductInput(
@@ -238,31 +242,140 @@ pub fn create_form(
   )
 }
 
+pub fn by_purchased_status_page(
+  products_purchased: List(product_model.Product),
+  products_unpurchased: List(product_model.Product),
+) {
+  html.main([attribute.class("max-w-app mx-auto py-10 space-y-10")], [
+    html.h1(
+      [attribute.class("text-2xl font-semibold first-letter:capitalize")],
+      [html.text("shopping")],
+    ),
+    by_purchased_status(products_purchased, products_unpurchased),
+  ])
+}
+
 pub fn by_purchased_status(
   products_purchased: List(product_model.Product),
   products_unpurchased: List(product_model.Product),
 ) {
-  html.main([], [
-    html.section([], [
-      html.h2([], [html.text("à acheter")]),
+  let unpurchased_length = products_unpurchased |> list.length |> int.to_string
+  let purchased_length = products_purchased |> list.length |> int.to_string
+
+  element.fragment([
+    html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
+      html.h2([], [
+        html.text("to buy "),
+        html.data([attribute.value(unpurchased_length)], [
+          html.text(
+            ["(", unpurchased_length, ")"]
+            |> string.join(with: ""),
+          ),
+        ]),
+      ]),
       html.ol(
-        [],
-        list.map(products_unpurchased, fn(p) {
-          html.li([], [html.text(p.title)])
-        }),
+        [
+          attribute.class(
+            "divide-y divide-surface-container-highest bg-surface-container-lowest rounded-3xl overflow-hidden",
+          ),
+        ],
+        list.map(products_unpurchased, fn(p) { item(p) }),
       ),
     ]),
-    html.section([], [
-      html.h2([], [html.text("acheté")]),
-      html.ol([], [
-        html.li(
-          [],
-          list.map(products_purchased, fn(p) {
-            html.li([], [html.text(p.title)])
-          }),
+    html.section([attribute.class("mx-auto max-w-xl space-y-10 mt-20")], [
+      html.h2([], [
+        html.text("bought "),
+        html.data([attribute.value(purchased_length)], [
+          html.text(["(", purchased_length, ")"] |> string.join(with: "")),
+        ]),
+      ]),
+      html.ol(
+        [
+          attribute.class(
+            "divide-y divide-surface-container-highest bg-surface-container-lowest rounded-3xl overflow-hidden opacity-50",
+          ),
+        ],
+        [html.li([], list.map(products_purchased, fn(p) { item(p) }))],
+      ),
+    ]),
+  ])
+}
+
+fn item(product: product_model.Product) {
+  html.li(
+    [
+      attribute.class(
+        "flex items-center gap-3 [&>input[type=checkbox]]:ml-auto p-4 transition-colors hover:bg-surface-container group",
+      ),
+    ],
+    [
+      user_components.avatar(
+        list.first(list.shuffle(["a", "b", "c", "d", "y", "z", "x", "k", "h"]))
+        |> result.unwrap("a"),
+      ),
+      html.div([], [
+        html.header([attribute.class("flex items-center gap-2")], [
+          html.label(
+            [
+              attribute.class(
+                "cursor-pointer truncate capitalize group-has-[input:checked]:line-through font-semibold decoration-2",
+              ),
+              attribute.for(generate_product_id(product.id)),
+            ],
+            [html.text(product.title)],
+          ),
+          case product.urgent {
+            True -> {
+              html.strong(
+                [
+                  attribute.class(
+                    "bg-error-container text-on-error-container w-max rounded-full px-2 py-1 text-xs",
+                  ),
+                ],
+                [html.text("urgent")],
+              )
+            }
+            False -> element.none()
+          },
+        ]),
+        html.dl(
+          [
+            attribute.class(
+              "text-outline flex text-sm [&>dd]:ml-1 [&>dt]:not-first-of-type:ml-2",
+            ),
+          ],
+          [
+            html.dt([], [
+              html.abbr(
+                [attribute.title("quantity"), attribute.class("no-underline")],
+                [html.text("qty: ")],
+              ),
+            ]),
+            html.dd([], [
+              html.data([attribute.value(product.quantity |> int.to_string)], [
+                html.text(product.quantity |> int.to_string),
+              ]),
+            ]),
+            case product.location {
+              option.Some(location) -> {
+                element.fragment([
+                  html.dt([], [html.text("location: ")]),
+                  html.dd([], [html.text(location)]),
+                ])
+              }
+              _ -> element.none()
+            },
+          ],
         ),
       ]),
-    ]),
-    html.a([attribute.href("/products/create")], [html.text("create product")]),
-  ])
+      checkbox.component([
+        attribute.id(generate_product_id(product.id)),
+        attribute.checked(option.is_some(product.bought_at)),
+      ]),
+    ],
+  )
+}
+
+fn generate_product_id(product_id: Int) {
+  string.join(["product", int.to_string(product_id)], "-")
 }

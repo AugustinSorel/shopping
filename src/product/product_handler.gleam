@@ -26,7 +26,7 @@ pub fn by_purchased_status_page(ctx: web.Ctx) {
     Ok(products) -> {
       let #(purchased, unpurchased) = products
 
-      [product_components.by_purchased_status(purchased, unpurchased)]
+      [product_components.by_purchased_status_page(purchased, unpurchased)]
       |> layout.component()
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
