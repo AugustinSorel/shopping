@@ -8,6 +8,7 @@ pub type AppError {
     location: option.Option(List(String)),
     urgent: option.Option(List(String)),
   )
+  Internal
 }
 
 pub fn messages_for(field: a, errors: List(#(a, b))) -> option.Option(List(b)) {

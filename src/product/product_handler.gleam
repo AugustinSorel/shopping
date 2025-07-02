@@ -38,7 +38,7 @@ pub fn by_purchased_status_page(ctx: web.Ctx) {
   }
 }
 
-pub fn create(req: wisp.Request) {
+pub fn create(req: wisp.Request, ctx: web.Ctx) {
   use formdata <- wisp.require_form(req)
 
   let input = {
@@ -49,8 +49,6 @@ pub fn create(req: wisp.Request) {
       urgent: list.key_find(formdata.values, "urgent") |> result.unwrap("off"),
     )
   }
-
-  echo input
 
   let result = {
     let product_valiator = {
@@ -67,6 +65,14 @@ pub fn create(req: wisp.Request) {
     }
 
     use product <- result.try(product_valiator)
+
+    use product <- result.try(product_repo.create(
+      ctx.db,
+      product.title,
+      product.quantity,
+      product.location,
+      product.urgent,
+    ))
 
     Ok(product)
   }
@@ -99,6 +105,9 @@ pub fn create(req: wisp.Request) {
       product_components.create_form(option.Some(input), option.Some(errors))
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.unprocessable_entity().status)
+    }
+    Error(error.Internal) -> {
+      wisp.internal_server_error()
     }
   }
 }

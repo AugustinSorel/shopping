@@ -1,4 +1,6 @@
+import app/error
 import gleam/dynamic/decode
+import gleam/option
 import pog
 import product/product_model
 
@@ -9,8 +11,8 @@ pub fn get_all(db: pog.Connection) {
     use id <- decode.field(0, decode.int)
     use title <- decode.field(1, decode.string)
     use quantity <- decode.field(2, decode.int)
-    use urgent <- decode.field(3, decode.bool)
-    use location <- decode.field(4, decode.optional(decode.string))
+    use location <- decode.field(3, decode.optional(decode.string))
+    use urgent <- decode.field(4, decode.bool)
     use bought_at <- decode.field(5, decode.optional(pog.timestamp_decoder()))
     use created_at <- decode.field(6, pog.timestamp_decoder())
     use updated_at <- decode.field(7, pog.timestamp_decoder())
@@ -42,17 +44,23 @@ pub fn get_all(db: pog.Connection) {
   }
 }
 
-pub fn create(db: pog.Connection, title: String, quantity: Int, urgent: Bool) {
+pub fn create(
+  db: pog.Connection,
+  title: String,
+  quantity: Int,
+  location: option.Option(String),
+  urgent: Bool,
+) {
   let query = {
-    "insert into products (title,quantity,urgent) values ($1,$2,$3) returning *"
+    "insert into products (title,quantity,location,urgent) values ($1,$2,$3,$4) returning *"
   }
 
   let row_decoder = {
     use id <- decode.field(0, decode.int)
     use title <- decode.field(1, decode.string)
     use quantity <- decode.field(2, decode.int)
-    use urgent <- decode.field(3, decode.bool)
-    use location <- decode.field(4, decode.optional(decode.string))
+    use location <- decode.field(3, decode.optional(decode.string))
+    use urgent <- decode.field(4, decode.bool)
     use bought_at <- decode.field(5, decode.optional(pog.timestamp_decoder()))
     use created_at <- decode.field(6, pog.timestamp_decoder())
     use updated_at <- decode.field(7, pog.timestamp_decoder())
@@ -61,8 +69,8 @@ pub fn create(db: pog.Connection, title: String, quantity: Int, urgent: Bool) {
       id:,
       title:,
       quantity:,
-      urgent:,
       location:,
+      urgent:,
       bought_at:,
       created_at:,
       updated_at:,
@@ -73,6 +81,7 @@ pub fn create(db: pog.Connection, title: String, quantity: Int, urgent: Bool) {
     pog.query(query)
     |> pog.parameter(pog.text(title))
     |> pog.parameter(pog.int(quantity))
+    |> pog.parameter(pog.nullable(fn(e) { pog.text(e) }, location))
     |> pog.parameter(pog.bool(urgent))
     |> pog.returning(row_decoder)
     |> pog.execute(db)
@@ -81,8 +90,8 @@ pub fn create(db: pog.Connection, title: String, quantity: Int, urgent: Bool) {
     Ok(pog.Returned(_rows, products)) -> {
       Ok(products)
     }
-    Error(err) -> {
-      Error(err)
+    Error(_e) -> {
+      Error(error.Internal)
     }
   }
 }
