@@ -146,21 +146,21 @@ pub fn create_page() {
 }
 
 pub fn create_bought(ctx: web.Ctx, product_id: String) {
-  let result = {
-    let validator = {
-      product_id
-      |> valid.validate(product_validator.id_str)
-      |> result.map_error(fn(errors) {
-        error.ProductValidation(
-          id: error.messages_for(product_validator.Title, errors),
-          title: option.None,
-          quantity: option.None,
-          location: option.None,
-          urgent: option.None,
-        )
-      })
-    }
+  let validator = {
+    product_id
+    |> valid.validate(product_validator.id_str)
+    |> result.map_error(fn(errors) {
+      error.ProductValidation(
+        id: error.messages_for(product_validator.Title, errors),
+        title: option.None,
+        quantity: option.None,
+        location: option.None,
+        urgent: option.None,
+      )
+    })
+  }
 
+  let result = {
     use product_id <- result.try(validator)
 
     use _product <- result.try(product_repo.create_bought_at(ctx.db, product_id))
@@ -192,21 +192,21 @@ pub fn create_bought(ctx: web.Ctx, product_id: String) {
 }
 
 pub fn delete_bought(ctx: web.Ctx, product_id: String) {
-  let result = {
-    let validator = {
-      product_id
-      |> valid.validate(product_validator.id_str)
-      |> result.map_error(fn(errors) {
-        error.ProductValidation(
-          id: error.messages_for(product_validator.Title, errors),
-          title: option.None,
-          quantity: option.None,
-          location: option.None,
-          urgent: option.None,
-        )
-      })
-    }
+  let validator = {
+    product_id
+    |> valid.validate(product_validator.id_str)
+    |> result.map_error(fn(errors) {
+      error.ProductValidation(
+        id: error.messages_for(product_validator.Title, errors),
+        title: option.None,
+        quantity: option.None,
+        location: option.None,
+        urgent: option.None,
+      )
+    })
+  }
 
+  let result = {
     use product_id <- result.try(validator)
 
     use _product <- result.try(product_repo.delete_bought_at(ctx.db, product_id))
