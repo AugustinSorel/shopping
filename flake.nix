@@ -38,7 +38,7 @@
                 '';
 
                 db-cli = pkgs.writeShellScriptBin "db_cli" ''
-                  docker exec -it shopping_plo_plo_db bash -c "psql -U postgres -d shopping_plo_plo"
+                  docker exec -it shopping_db bash -c "psql -U postgres -d shopping"
                 '';
               in
 

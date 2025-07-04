@@ -14,7 +14,7 @@ pub fn main() -> Nil {
     pog.default_config()
     |> pog.host("localhost")
     |> pog.password(option.Some("postgres"))
-    |> pog.database("gleam_shopping_plo_plo")
+    |> pog.database("shopping")
     |> pog.pool_size(15)
     |> pog.connect
 
