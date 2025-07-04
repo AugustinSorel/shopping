@@ -139,3 +139,34 @@ pub fn create_bought(ctx: web.Ctx, product_id: String) {
     }
   }
 }
+
+pub fn delete_bought(ctx: web.Ctx, product_id: String) {
+  let result = {
+    let validator = {
+      product_id
+      |> valid.validate(product_validator.id_str)
+      |> result.replace_error(error.Internal)
+    }
+
+    use product_id <- result.try(validator)
+
+    use _product <- result.try(product_repo.delete_bought_at(ctx.db, product_id))
+
+    use products <- result.try(product_service.get_by_purchase_status(ctx))
+
+    Ok(products)
+  }
+
+  case result {
+    Ok(product_service.ProductsByStatus(purchased, unpurchased)) -> {
+      product_components.by_purchased_status(purchased, unpurchased)
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.ok().status)
+      |> wisp.set_header("hx-retarget", "main")
+      |> wisp.set_header("hx-reswap", "outerHTML")
+    }
+    Error(_) -> {
+      wisp.internal_server_error()
+    }
+  }
+}

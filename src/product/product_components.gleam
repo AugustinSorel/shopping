@@ -228,13 +228,11 @@ pub fn by_purchased_status_page(
   products_purchased: List(product_model.Product),
   products_unpurchased: List(product_model.Product),
 ) {
-  element.fragment([
-    html.header([attribute.class("max-w-app mx-auto my-10")], [
-      html.h1(
-        [attribute.class("text-2xl font-semibold first-letter:capitalize")],
-        [html.text("shopping")],
-      ),
-    ]),
+  html.main([attribute.class("max-w-xl mx-auto")], [
+    html.h1(
+      [attribute.class("text-2xl font-semibold first-letter:capitalize my-10")],
+      [html.text("shopping")],
+    ),
     by_purchased_status(products_purchased, products_unpurchased),
   ])
 }
@@ -246,17 +244,17 @@ pub fn by_purchased_status(
   let unpurchased_length = products_unpurchased |> list.length |> int.to_string
   let purchased_length = products_purchased |> list.length |> int.to_string
 
-  html.main([attribute.class("mx-auto max-w-xl space-y-20")], [
-    html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
-      html.h2([], [
-        html.text("to buy "),
-        html.data([attribute.value(unpurchased_length)], [
-          html.text(
-            ["(", unpurchased_length, ")"]
-            |> string.join(with: ""),
-          ),
-        ]),
+  html.dl([attribute.class("space-y-10")], [
+    html.dt([], [
+      html.text("to buy "),
+      html.data([attribute.value(unpurchased_length)], [
+        html.text(
+          ["(", unpurchased_length, ")"]
+          |> string.join(with: ""),
+        ),
       ]),
+    ]),
+    html.dd([], [
       html.ol(
         [
           attribute.class(
@@ -266,13 +264,13 @@ pub fn by_purchased_status(
         list.map(products_unpurchased, fn(p) { item(p) }),
       ),
     ]),
-    html.section([attribute.class("mx-auto max-w-xl space-y-10 mt-20")], [
-      html.h2([], [
-        html.text("bought "),
-        html.data([attribute.value(purchased_length)], [
-          html.text(["(", purchased_length, ")"] |> string.join(with: "")),
-        ]),
+    html.dt([], [
+      html.text("bought "),
+      html.data([attribute.value(purchased_length)], [
+        html.text(["(", purchased_length, ")"] |> string.join(with: "")),
       ]),
+    ]),
+    html.dd([], [
       html.ol(
         [
           attribute.class(
@@ -293,10 +291,7 @@ fn item(product: product_model.Product) {
       ),
     ],
     [
-      user_components.avatar(
-        list.first(list.shuffle(["a", "b", "c", "d", "y", "z", "x", "k", "h"]))
-        |> result.unwrap("a"),
-      ),
+      user_components.avatar(product.title),
       html.div([], [
         html.header([attribute.class("flex items-center gap-2")], [
           html.label(

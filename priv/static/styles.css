@@ -203,12 +203,6 @@
   .my-10 {
     margin-block: calc(var(--spacing) * 10);
   }
-  .mt-10 {
-    margin-top: calc(var(--spacing) * 10);
-  }
-  .mt-20 {
-    margin-top: calc(var(--spacing) * 20);
-  }
   .mb-24 {
     margin-bottom: calc(var(--spacing) * 24);
   }
@@ -519,20 +513,6 @@
       filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
     }
   }
-  .after\:blur-xl {
-    &::after {
-      content: var(--tw-content);
-      --tw-blur: blur(var(--blur-xl));
-      filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
-    }
-  }
-  .after\:content-\[attr\(data-avatar\)\] {
-    &::after {
-      content: var(--tw-content);
-      --tw-content: attr(data-avatar);
-      content: var(--tw-content);
-    }
-  }
   .after\:content-\[attr\(data-initial\)\] {
     &::after {
       content: var(--tw-content);
@@ -634,6 +614,11 @@
       opacity: 50%;
     }
   }
+  .\[\&\>dd\]\:mt-10 {
+    &>dd {
+      margin-top: calc(var(--spacing) * 10);
+    }
+  }
   .\[\&\>dd\]\:ml-1 {
     &>dd {
       margin-left: calc(var(--spacing) * 1);
@@ -649,11 +634,6 @@
   .\[\&\>input\[type\=checkbox\]\]\:ml-auto {
     &>input[type=checkbox] {
       margin-left: auto;
-    }
-  }
-  .\[\&\>label\]\:mt-5 {
-    &>label {
-      margin-top: calc(var(--spacing) * 5);
     }
   }
 }

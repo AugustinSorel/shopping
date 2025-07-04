@@ -43,7 +43,8 @@ fn product_bought(
 ) -> wisp.Response {
   case req.method {
     http.Post -> product_handler.create_bought(ctx, product_id)
+    http.Delete -> product_handler.delete_bought(ctx, product_id)
 
-    _ -> wisp.method_not_allowed([http.Get, http.Post])
+    _ -> wisp.method_not_allowed([http.Delete, http.Post])
   }
 }
