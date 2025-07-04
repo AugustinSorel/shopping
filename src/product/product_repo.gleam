@@ -40,7 +40,7 @@ pub fn get_all(db: pog.Connection) {
       Ok(products)
     }
     Error(_e) -> {
-      Error(error.Internal)
+      Error(error.Internal(msg: "fetching all products failed"))
     }
   }
 }
@@ -59,7 +59,7 @@ pub fn create(
   let row_decoder = {
     use id <- decode.field(0, decode.int)
     use title <- decode.field(1, decode.string)
-    use quantity <- decode.field(2, decode.int)
+    use quantity <- decode.field(1, decode.int)
     use location <- decode.field(3, decode.optional(decode.string))
     use urgent <- decode.field(4, decode.bool)
     use bought_at <- decode.field(5, decode.optional(pog.timestamp_decoder()))
@@ -92,7 +92,7 @@ pub fn create(
       Ok(products)
     }
     Error(_e) -> {
-      Error(error.Internal)
+      Error(error.Internal(msg: "creating products failed"))
     }
   }
 }
@@ -135,7 +135,7 @@ pub fn create_bought_at(db: pog.Connection, product_id: Int) {
       Ok(product)
     }
     _ -> {
-      Error(error.Internal)
+      Error(error.Internal(msg: "creating bought at to product failed"))
     }
   }
 }
@@ -178,7 +178,7 @@ pub fn delete_bought_at(db: pog.Connection, product_id: Int) {
       Ok(product)
     }
     _ -> {
-      Error(error.Internal)
+      Error(error.Internal(msg: "deleting bought at to product failed"))
     }
   }
 }

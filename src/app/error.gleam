@@ -3,12 +3,13 @@ import gleam/option
 
 pub type AppError {
   ProductValidation(
+    id: option.Option(List(String)),
     title: option.Option(List(String)),
     quantity: option.Option(List(String)),
     location: option.Option(List(String)),
     urgent: option.Option(List(String)),
   )
-  Internal
+  Internal(msg: String)
 }
 
 pub fn messages_for(field: a, errors: List(#(a, b))) -> option.Option(List(b)) {

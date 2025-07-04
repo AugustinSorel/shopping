@@ -1,10 +1,11 @@
+import components/alert
 import components/button
 import components/checkbox
+import components/icon
 import components/input
 import gleam/int
 import gleam/list
 import gleam/option
-import gleam/result
 import gleam/string
 import lustre/attribute
 import lustre/element
@@ -216,7 +217,11 @@ pub fn create_form(
       button.component(button.Default, button.Medium, [], [html.text("create")]),
       case errors {
         option.Some(CreateProductErrors(root: option.Some(e), ..)) -> {
-          html.p([], [html.text(e)])
+          alert.alert(alert.Destructive, [], [
+            icon.circle_alert(),
+            alert.title([], [html.text("something went wrong!")]),
+            alert.description([], [html.text(e)]),
+          ])
         }
         _ -> element.none()
       },
@@ -224,10 +229,7 @@ pub fn create_form(
   )
 }
 
-pub fn by_purchased_status_page(
-  products_purchased: List(product_model.Product),
-  products_unpurchased: List(product_model.Product),
-) {
+pub fn by_purchased_status_page(children: element.Element(msg)) {
   element.fragment([
     html.header([attribute.class("max-w-app mx-auto my-10")], [
       html.h1(
@@ -235,7 +237,7 @@ pub fn by_purchased_status_page(
         [html.text("shopping")],
       ),
     ]),
-    by_purchased_status(products_purchased, products_unpurchased),
+    children,
   ])
 }
 
@@ -281,6 +283,27 @@ pub fn by_purchased_status(
         ],
         list.map(products_purchased, fn(p) { item(p) }),
       ),
+    ]),
+  ])
+}
+
+pub fn by_purchase_status_fallback(msg msg: String) {
+  html.main([attribute.class("mx-auto max-w-xl space-y-20")], [
+    html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
+      html.h2([], [html.text("to buy")]),
+      alert.alert(alert.Destructive, [], [
+        icon.circle_alert(),
+        alert.title([], [html.text("something went wrong!")]),
+        alert.description([], [html.text(msg)]),
+      ]),
+    ]),
+    html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
+      html.h2([], [html.text("bought")]),
+      alert.alert(alert.Destructive, [], [
+        icon.circle_alert(),
+        alert.title([], [html.text("something went wrong!")]),
+        alert.description([], [html.text(msg)]),
+      ]),
     ]),
   ])
 }
@@ -372,6 +395,16 @@ fn item(product: product_model.Product) {
       ]),
     ],
   )
+}
+
+pub fn item_fallback(msg msg: String) {
+  html.li([], [
+    alert.alert(alert.Destructive, [], [
+      icon.circle_alert(),
+      alert.title([], [html.text("something went wrong!")]),
+      alert.description([], [html.text(msg)]),
+    ]),
+  ])
 }
 
 fn generate_product_id(product_id: Int) {

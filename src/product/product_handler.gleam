@@ -17,13 +17,27 @@ pub fn by_purchased_status_page(ctx: web.Ctx) {
 
   case result {
     Ok(product_service.ProductsByStatus(purchased, unpurchased)) -> {
-      [product_components.by_purchased_status_page(purchased, unpurchased)]
+      product_components.by_purchased_status(purchased, unpurchased)
+      |> product_components.by_purchased_status_page
       |> layout.component()
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
     }
-    Error(_e) -> {
-      wisp.internal_server_error()
+    Error(error.Internal(msg)) -> {
+      msg
+      |> product_components.by_purchase_status_fallback
+      |> product_components.by_purchased_status_page
+      |> layout.component()
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.internal_server_error().status)
+    }
+    Error(_) -> {
+      "something went wrong"
+      |> product_components.by_purchase_status_fallback
+      |> product_components.by_purchased_status_page
+      |> layout.component()
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.internal_server_error().status)
     }
   }
 }
@@ -45,6 +59,7 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
     |> valid.validate(product_validator.create)
     |> result.map_error(fn(errors) {
       error.ProductValidation(
+        id: option.None,
         title: error.messages_for(product_validator.Title, errors),
         quantity: error.messages_for(product_validator.Quantity, errors),
         location: error.messages_for(product_validator.Location, errors),
@@ -72,7 +87,7 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
       wisp.created()
       |> wisp.set_header("hx-redirect", "/products")
     }
-    Error(error.ProductValidation(title, quantity, location, urgent)) -> {
+    Error(error.ProductValidation(title:, quantity:, location:, urgent:, ..)) -> {
       let errors = {
         product_components.CreateProductErrors(
           root: option.None,
@@ -96,14 +111,35 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.unprocessable_entity().status)
     }
-    Error(error.Internal) -> {
-      wisp.internal_server_error()
+    Error(error.Internal(msg)) -> {
+      let errors = {
+        product_components.CreateProductErrors(
+          root: option.Some(msg),
+          title: option.None,
+          quantity: option.None,
+          location: option.None,
+          urgent: option.None,
+        )
+      }
+
+      let input = {
+        product_components.CreateProductInput(
+          title: input.title,
+          quantity: input.quantity,
+          location: input.location,
+          urgent: input.urgent,
+        )
+      }
+
+      product_components.create_form(option.Some(input), option.Some(errors))
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.unprocessable_entity().status)
     }
   }
 }
 
 pub fn create_page() {
-  [product_components.create_page()]
+  product_components.create_page()
   |> layout.component()
   |> element.to_document_string_tree
   |> wisp.html_response(wisp.ok().status)
@@ -114,7 +150,15 @@ pub fn create_bought(ctx: web.Ctx, product_id: String) {
     let validator = {
       product_id
       |> valid.validate(product_validator.id_str)
-      |> result.replace_error(error.Internal)
+      |> result.map_error(fn(errors) {
+        error.ProductValidation(
+          id: error.messages_for(product_validator.Title, errors),
+          title: option.None,
+          quantity: option.None,
+          location: option.None,
+          urgent: option.None,
+        )
+      })
     }
 
     use product_id <- result.try(validator)
@@ -134,8 +178,15 @@ pub fn create_bought(ctx: web.Ctx, product_id: String) {
       |> wisp.set_header("hx-retarget", "main")
       |> wisp.set_header("hx-reswap", "outerHTML")
     }
+    Error(error.Internal(msg)) -> {
+      product_components.item_fallback(msg)
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.internal_server_error().status)
+    }
     Error(_) -> {
-      wisp.internal_server_error()
+      product_components.item_fallback(msg: "something went wrong")
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.internal_server_error().status)
     }
   }
 }
@@ -145,7 +196,15 @@ pub fn delete_bought(ctx: web.Ctx, product_id: String) {
     let validator = {
       product_id
       |> valid.validate(product_validator.id_str)
-      |> result.replace_error(error.Internal)
+      |> result.map_error(fn(errors) {
+        error.ProductValidation(
+          id: error.messages_for(product_validator.Title, errors),
+          title: option.None,
+          quantity: option.None,
+          location: option.None,
+          urgent: option.None,
+        )
+      })
     }
 
     use product_id <- result.try(validator)
@@ -165,8 +224,15 @@ pub fn delete_bought(ctx: web.Ctx, product_id: String) {
       |> wisp.set_header("hx-retarget", "main")
       |> wisp.set_header("hx-reswap", "outerHTML")
     }
+    Error(error.Internal(msg)) -> {
+      product_components.item_fallback(msg)
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.internal_server_error().status)
+    }
     Error(_) -> {
-      wisp.internal_server_error()
+      product_components.item_fallback(msg: "something went wrong")
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.internal_server_error().status)
     }
   }
 }

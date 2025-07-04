@@ -1,8 +1,8 @@
 import lustre/attribute
-import lustre/element.{type Element}
+import lustre/element
 import lustre/element/html
 
-pub fn component(children: List(Element(msg))) {
+pub fn component(children: element.Element(msg)) {
   html.html([attribute.lang("en")], [
     html.head([], [
       html.meta([attribute.charset("utf-8")]),
@@ -30,9 +30,8 @@ pub fn component(children: List(Element(msg))) {
       ]),
       html.title([], "shopping"),
     ]),
-    html.body(
-      [attribute.class("bg-surface text-on-surface mb-24 p-4")],
+    html.body([attribute.class("bg-surface text-on-surface mb-24 p-4")], [
       children,
-    ),
+    ]),
   ])
 }
