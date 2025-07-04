@@ -5,8 +5,9 @@ import pog
 import product/product_model
 
 pub fn get_all(db: pog.Connection) {
-  let query =
+  let query = {
     "select * from products as p order by p.urgent desc, p.updated_at desc"
+  }
 
   let row_decoder = {
     use id <- decode.field(0, decode.int)
