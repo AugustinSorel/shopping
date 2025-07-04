@@ -14,7 +14,7 @@ import user/user_components
 
 pub type CreateProductInput {
   CreateProductInput(
-    name: option.Option(String),
+    title: option.Option(String),
     quantity: option.Option(String),
     location: option.Option(String),
     urgent: option.Option(String),
@@ -24,7 +24,7 @@ pub type CreateProductInput {
 pub type CreateProductErrors {
   CreateProductErrors(
     root: option.Option(String),
-    name: option.Option(List(String)),
+    title: option.Option(List(String)),
     quantity: option.Option(List(String)),
     location: option.Option(List(String)),
     urgent: option.Option(List(String)),
@@ -34,7 +34,7 @@ pub type CreateProductErrors {
 pub fn create_page() {
   let values = {
     CreateProductInput(
-      name: option.None,
+      title: option.None,
       location: option.None,
       quantity: option.Some("1"),
       urgent: option.None,
@@ -84,14 +84,14 @@ pub fn create_form(
           attribute.type_("text"),
           attribute.name("title"),
           case values {
-            option.Some(CreateProductInput(name: option.Some(name), ..)) -> {
-              attribute.value(name)
+            option.Some(CreateProductInput(title: option.Some(title), ..)) -> {
+              attribute.value(title)
             }
             _ -> attribute.none()
           },
         ]),
         case errors {
-          option.Some(CreateProductErrors(name: option.Some([e, ..]), ..)) -> {
+          option.Some(CreateProductErrors(title: option.Some([e, ..]), ..)) -> {
             html.p(
               [attribute.class("text-error text-sm first-letter:capitalize")],
               [html.text(e)],
@@ -228,11 +228,13 @@ pub fn by_purchased_status_page(
   products_purchased: List(product_model.Product),
   products_unpurchased: List(product_model.Product),
 ) {
-  html.main([attribute.class("max-w-app mx-auto py-10 space-y-10")], [
-    html.h1(
-      [attribute.class("text-2xl font-semibold first-letter:capitalize")],
-      [html.text("shopping")],
-    ),
+  element.fragment([
+    html.header([attribute.class("max-w-app mx-auto my-10")], [
+      html.h1(
+        [attribute.class("text-2xl font-semibold first-letter:capitalize")],
+        [html.text("shopping")],
+      ),
+    ]),
     by_purchased_status(products_purchased, products_unpurchased),
   ])
 }
@@ -244,7 +246,7 @@ pub fn by_purchased_status(
   let unpurchased_length = products_unpurchased |> list.length |> int.to_string
   let purchased_length = products_purchased |> list.length |> int.to_string
 
-  element.fragment([
+  html.main([attribute.class("mx-auto max-w-xl space-y-20")], [
     html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
       html.h2([], [
         html.text("to buy "),
@@ -353,6 +355,23 @@ fn item(product: product_model.Product) {
       checkbox.component([
         attribute.id(generate_product_id(product.id)),
         attribute.checked(option.is_some(product.bought_at)),
+        case product.bought_at {
+          option.Some(_) -> {
+            attribute.attribute(
+              "hx-delete",
+              string.concat(["/products/", int.to_string(product.id), "/bought"]),
+            )
+          }
+          option.None -> {
+            attribute.attribute(
+              "hx-post",
+              string.concat(["/products/", int.to_string(product.id), "/bought"]),
+            )
+          }
+        },
+        attribute.attribute("hx-target", "closest li"),
+        attribute.attribute("hx-swap", "outerHTML"),
+        attribute.attribute("hx-disabled-elt", "this"),
       ]),
     ],
   )

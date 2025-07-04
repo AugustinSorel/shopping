@@ -13,6 +13,8 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
     ["products", "create"] -> products_create(req)
 
+    ["products", product_id, "bought"] -> product_bought(req, ctx, product_id)
+
     _ -> wisp.not_found()
   }
 }
@@ -29,6 +31,18 @@ fn products(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
   case req.method {
     http.Get -> product_handler.by_purchased_status_page(ctx)
     http.Post -> product_handler.create(req, ctx)
+
+    _ -> wisp.method_not_allowed([http.Get, http.Post])
+  }
+}
+
+fn product_bought(
+  req: wisp.Request,
+  ctx: web.Ctx,
+  product_id: String,
+) -> wisp.Response {
+  case req.method {
+    http.Post -> product_handler.create_bought(ctx, product_id)
 
     _ -> wisp.method_not_allowed([http.Get, http.Post])
   }
