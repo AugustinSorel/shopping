@@ -1,8 +1,9 @@
+import app/env
 import pog
 import wisp
 
 pub type Ctx {
-  Ctx(db: pog.Connection)
+  Ctx(db: pog.Connection, env: env.Env)
 }
 
 pub fn middleware(
