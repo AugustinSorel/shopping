@@ -20,11 +20,13 @@
           };
         in
         {
-          packages.default = pkgs.buildGleamApplication {
-            src = ./.;
+          packages = {
+            default = pkgs.buildGleamApplication {
+              src = ./.;
+            };
           };
 
-          devShells.${system} = {
+          devShells = {
             default =
               let
                 styles-watch = pkgs.writeShellScriptBin "styles_watch" ''
@@ -46,6 +48,7 @@
                     tailwindcss_4
                     watchman
                     goose
+                    watchexec
 
                     styles-watch
                     db-cli
