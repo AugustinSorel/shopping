@@ -29,6 +29,10 @@
           devShells = {
             default =
               let
+                server-watch = pkgs.writeShellScriptBin "server_watch" ''
+                  watchexec --restart --verbose --wrap-process=session --stop-signal SIGTERM --exts gleam --debounce 500ms --watch src/ -- "gleam run"
+                '';
+
                 styles-watch = pkgs.writeShellScriptBin "styles_watch" ''
                   tailwindcss -i ./src/styles/styles.css -o ./priv/static/styles.css --watch
                 '';
@@ -50,10 +54,18 @@
                     goose
                     watchexec
 
+                    server-watch
                     styles-watch
                     db-cli
                   ];
                 };
+
+            shellHook = ''
+              echo "🚀 Development shell ready."
+              echo "Use 'server_watch' to reload the server."
+              echo "Use 'styles_watch' to reload the css."
+              echo "Use 'db_cli' to enter into the db."
+            '';
           };
         })
   );
