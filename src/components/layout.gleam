@@ -1,8 +1,9 @@
+import components/footer
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 
-pub fn component(children: element.Element(msg)) {
+pub fn component(children: element.Element(msg), current_path) {
   html.html([attribute.lang("en")], [
     html.head([], [
       html.meta([attribute.charset("utf-8")]),
@@ -32,6 +33,7 @@ pub fn component(children: element.Element(msg)) {
     ]),
     html.body([attribute.class("bg-surface text-on-surface mb-24 p-4")], [
       children,
+      footer.component(current_path),
     ]),
   ])
 }

@@ -218,7 +218,7 @@ pub fn create_form(
       case errors {
         option.Some(CreateProductErrors(root: option.Some(e), ..)) -> {
           alert.alert(alert.Destructive, [], [
-            icon.circle_alert(),
+            icon.circle_alert([]),
             alert.title([], [html.text("something went wrong!")]),
             alert.description([], [html.text(e)]),
           ])
@@ -292,7 +292,7 @@ pub fn by_purchase_status_fallback(msg msg: String) {
     html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
       html.h2([], [html.text("to buy")]),
       alert.alert(alert.Destructive, [], [
-        icon.circle_alert(),
+        icon.circle_alert([]),
         alert.title([], [html.text("something went wrong!")]),
         alert.description([], [html.text(msg)]),
       ]),
@@ -300,7 +300,7 @@ pub fn by_purchase_status_fallback(msg msg: String) {
     html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
       html.h2([], [html.text("bought")]),
       alert.alert(alert.Destructive, [], [
-        icon.circle_alert(),
+        icon.circle_alert([]),
         alert.title([], [html.text("something went wrong!")]),
         alert.description([], [html.text(msg)]),
       ]),
@@ -400,7 +400,7 @@ fn item(product: product_model.Product) {
 pub fn item_fallback(msg msg: String) {
   html.li([], [
     alert.alert(alert.Destructive, [], [
-      icon.circle_alert(),
+      icon.circle_alert([]),
       alert.title([], [html.text("something went wrong!")]),
       alert.description([], [html.text(msg)]),
     ]),

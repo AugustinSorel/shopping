@@ -7,6 +7,10 @@ fn icon(
   attr: List(attribute.Attribute(msg)),
   children: List(element.Element(msg)),
 ) {
+  let class = {
+    "fill-none stroke-current group-aria-[current='true']:fill-current"
+  }
+
   html.svg(
     [
       attribute.height(24),
@@ -14,17 +18,15 @@ fn icon(
       attribute.attribute("viewbox", "0 0 24 24"),
       attribute.attribute("stroke-linecap", "round"),
       attribute.attribute("stroke-linejoin", "round"),
-      attribute.class(
-        "fill-none stroke-current group-aria-[current='true']:fill-current",
-      ),
+      attribute.class(class),
       ..attr
     ],
     children,
   )
 }
 
-pub fn home() {
-  icon([], [
+pub fn home(attr: List(attribute.Attribute(msg))) {
+  icon(attr, [
     svg.path([
       attribute.attribute(
         "d",
@@ -34,8 +36,8 @@ pub fn home() {
   ])
 }
 
-pub fn circle_plus() {
-  icon([], [
+pub fn circle_plus(attr: List(attribute.Attribute(msg))) {
+  icon(attr, [
     svg.circle([
       attribute.attribute("cx", "12"),
       attribute.attribute("cy", "12"),
@@ -46,8 +48,8 @@ pub fn circle_plus() {
   ])
 }
 
-pub fn user() {
-  icon([], [
+pub fn user(attr: List(attribute.Attribute(msg))) {
+  icon(attr, [
     svg.path([
       attribute.attribute("d", "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"),
     ]),
@@ -59,8 +61,8 @@ pub fn user() {
   ])
 }
 
-pub fn circle_alert() {
-  icon([], [
+pub fn circle_alert(attr: List(attribute.Attribute(msg))) {
+  icon(attr, [
     svg.circle([
       attribute.attribute("cx", "12"),
       attribute.attribute("cy", "12"),
@@ -81,8 +83,8 @@ pub fn circle_alert() {
   ])
 }
 
-pub fn spinner() {
-  icon([], [
+pub fn spinner(attr: List(attribute.Attribute(msg))) {
+  icon(attr, [
     svg.path([attribute.attribute("d", "M12 2v4")]),
     svg.path([attribute.attribute("d", "m16.2 7.8 2.9-2.9")]),
     svg.path([attribute.attribute("d", "M18 12h4")]),
