@@ -1,6 +1,7 @@
 import app/web
 import gleam/http
 import product/product_handler
+import session/session_handler
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
@@ -10,13 +11,19 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     [] -> wisp.redirect(to: "/products")
 
     ["products"] -> products(req, ctx)
-
     ["products", "create"] -> products_create(req)
-
     ["products", product_id, "bought"] -> product_bought(req, ctx, product_id)
+
+    ["auth", "sign-up"] -> sign_up(req, ctx)
 
     _ -> wisp.not_found()
   }
+}
+
+fn sign_up(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Post)
+
+  session_handler.create(req, ctx)
 }
 
 fn products_create(req: wisp.Request) -> wisp.Response {

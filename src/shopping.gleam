@@ -23,7 +23,7 @@ pub fn main() -> Nil {
     |> pog.pool_size(15)
     |> pog.connect
 
-  let ctx = web.Ctx(db:, env:)
+  let ctx = web.Ctx(db:, env:, user_id: option.None)
 
   let secret = wisp.random_string(64)
 

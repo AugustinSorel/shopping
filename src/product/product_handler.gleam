@@ -135,6 +135,30 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.unprocessable_entity().status)
     }
+    Error(_) -> {
+      let errors = {
+        product_components.CreateProductErrors(
+          root: option.Some("something went wrong"),
+          title: option.None,
+          quantity: option.None,
+          location: option.None,
+          urgent: option.None,
+        )
+      }
+
+      let input = {
+        product_components.CreateProductInput(
+          title: input.title,
+          quantity: input.quantity,
+          location: input.location,
+          urgent: input.urgent,
+        )
+      }
+
+      product_components.create_form(option.Some(input), option.Some(errors))
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.unprocessable_entity().status)
+    }
   }
 }
 

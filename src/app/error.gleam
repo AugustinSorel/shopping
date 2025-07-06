@@ -10,6 +10,9 @@ pub type AppError {
     urgent: option.Option(List(String)),
   )
   Internal(msg: String)
+  SessionExpired
+  SessionTokenValidation
+  SessionSecretInvalid
 }
 
 pub fn messages_for(field: a, errors: List(#(a, b))) -> option.Option(List(b)) {

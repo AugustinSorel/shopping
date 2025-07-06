@@ -5,7 +5,6 @@ import lustre/attribute
 import lustre/element/html
 
 pub fn component(current_path: String) {
-  echo current_path
   html.footer(
     [
       attribute.class(
