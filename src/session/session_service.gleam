@@ -74,6 +74,17 @@ pub fn set_cookie(res: wisp.Response, req: wisp.Request, token: String) {
   )
 }
 
+pub fn delete_cookie(res: wisp.Response, req: wisp.Request) {
+  wisp.set_cookie(
+    res,
+    req,
+    name: cookie_name,
+    value: "",
+    security: wisp.Signed,
+    max_age: 0,
+  )
+}
+
 pub fn get_cookie(req: wisp.Request) {
   wisp.get_cookie(req, cookie_name, wisp.Signed)
 }

@@ -1,11 +1,23 @@
 import app/web
 import gleam/http
+import gleam/option
+import gleam/result
 import product/product_handler
 import session/session_handler
+import session/session_service
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
   use req <- web.middleware(req)
+
+  let session =
+    req
+    |> session_service.get_cookie()
+    |> result.unwrap("")
+    |> session_service.validate(ctx)
+    |> option.from_result
+
+  let ctx = web.Ctx(..ctx, session:)
 
   case wisp.path_segments(req) {
     [] -> wisp.redirect(to: "/products")
@@ -15,6 +27,7 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["products", product_id, "bought"] -> product_bought(req, ctx, product_id)
 
     ["auth", "sign-up"] -> sign_up(req, ctx)
+    ["auth", "sign-out"] -> sign_out(req, ctx)
 
     _ -> wisp.not_found()
   }
@@ -24,6 +37,12 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
   use <- wisp.require_method(req, http.Post)
 
   session_handler.create(req, ctx)
+}
+
+fn sign_out(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Post)
+
+  session_handler.sign_out(req, ctx)
 }
 
 fn products_create(req: wisp.Request) -> wisp.Response {

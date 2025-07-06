@@ -1,10 +1,15 @@
 import app/env
 import gleam/option
 import pog
+import session/session_model
 import wisp
 
 pub type Ctx {
-  Ctx(db: pog.Connection, env: env.Env, user_id: option.Option(Int))
+  Ctx(
+    db: pog.Connection,
+    env: env.Env,
+    session: option.Option(session_model.Session),
+  )
 }
 
 pub fn middleware(

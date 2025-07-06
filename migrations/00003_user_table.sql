@@ -1,21 +1,21 @@
 -- +goose Up
 -- +goose StatementBegin
-create table sessions (
-    id text not null primary key,
-    secret_hash bytea not null, 
-    last_verified_at timestamp not null default now(),
+create table users(
+    id integer primary key generated always as identity,
+    email text unique not null,
+    password text not null,
     created_at timestamp not null default now(),
     updated_at timestamp not null default now()
 );
 
 create trigger set_updated_at
-before update on sessions
+before update on users
 for each row
 execute procedure update_updated_at_column();
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-drop table sessions;
-drop trigger if exists set_updated_at on sessions;
+drop table users;
+drop trigger if exists set_updated_at on users;
 -- +goose StatementEnd

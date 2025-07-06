@@ -13,6 +13,7 @@ pub type AppError {
   SessionExpired
   SessionTokenValidation
   SessionSecretInvalid
+  Unauthorized
 }
 
 pub fn messages_for(field: a, errors: List(#(a, b))) -> option.Option(List(b)) {

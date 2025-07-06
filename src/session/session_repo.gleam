@@ -6,21 +6,24 @@ import session/session_model
 pub fn create(
   id id: String,
   secret_hash secret_hash: BitArray,
+  user_id user_id: Int,
   db db: pog.Connection,
 ) {
   let query = {
-    "insert into sessions (id, secret_hash) VALUES ($1, $2) returning *"
+    "insert into sessions (id, secret_hash, user_id) VALUES ($1, $2, $3) returning *"
   }
 
   let row_decoder = {
     use id <- decode.field(0, decode.string)
-    use secret_hash <- decode.field(1, decode.bit_array)
-    use last_verified_at <- decode.field(2, pog.timestamp_decoder())
-    use created_at <- decode.field(3, pog.timestamp_decoder())
-    use updated_at <- decode.field(4, pog.timestamp_decoder())
+    use user_id <- decode.field(1, decode.int)
+    use secret_hash <- decode.field(2, decode.bit_array)
+    use last_verified_at <- decode.field(3, pog.timestamp_decoder())
+    use created_at <- decode.field(4, pog.timestamp_decoder())
+    use updated_at <- decode.field(5, pog.timestamp_decoder())
 
     decode.success(session_model.Session(
       id:,
+      user_id:,
       secret_hash:,
       last_verified_at:,
       created_at:,
@@ -32,6 +35,7 @@ pub fn create(
     pog.query(query)
     |> pog.parameter(pog.text(id))
     |> pog.parameter(pog.bytea(secret_hash))
+    |> pog.parameter(pog.int(user_id))
     |> pog.returning(row_decoder)
     |> pog.execute(db)
 
@@ -43,18 +47,20 @@ pub fn create(
 
 pub fn get_by_id(id: String, db: pog.Connection) {
   let query = {
-    "select * from sessions where id = $1"
+    "select * from sessions where sessions.id = $1"
   }
 
   let row_decoder = {
     use id <- decode.field(0, decode.string)
-    use secret_hash <- decode.field(1, decode.bit_array)
-    use last_verified_at <- decode.field(2, pog.timestamp_decoder())
-    use created_at <- decode.field(3, pog.timestamp_decoder())
-    use updated_at <- decode.field(4, pog.timestamp_decoder())
+    use user_id <- decode.field(1, decode.int)
+    use secret_hash <- decode.field(2, decode.bit_array)
+    use last_verified_at <- decode.field(3, pog.timestamp_decoder())
+    use created_at <- decode.field(4, pog.timestamp_decoder())
+    use updated_at <- decode.field(5, pog.timestamp_decoder())
 
     decode.success(session_model.Session(
       id:,
+      user_id:,
       secret_hash:,
       last_verified_at:,
       created_at:,
@@ -97,13 +103,15 @@ pub fn refresh_last_verified_at(id: String, db: pog.Connection) {
 
   let row_decoder = {
     use id <- decode.field(0, decode.string)
-    use secret_hash <- decode.field(1, decode.bit_array)
-    use last_verified_at <- decode.field(2, pog.timestamp_decoder())
-    use created_at <- decode.field(3, pog.timestamp_decoder())
-    use updated_at <- decode.field(4, pog.timestamp_decoder())
+    use user_id <- decode.field(1, decode.int)
+    use secret_hash <- decode.field(2, decode.bit_array)
+    use last_verified_at <- decode.field(3, pog.timestamp_decoder())
+    use created_at <- decode.field(4, pog.timestamp_decoder())
+    use updated_at <- decode.field(5, pog.timestamp_decoder())
 
     decode.success(session_model.Session(
       id:,
+      user_id:,
       secret_hash:,
       last_verified_at:,
       created_at:,
