@@ -13,6 +13,8 @@ import valid
 import wisp
 
 pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
+  use _session <- web.auth_guard(ctx)
+
   let result = product_service.get_by_purchase_status(ctx)
 
   case result {
@@ -38,6 +40,8 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
 }
 
 pub fn create(req: wisp.Request, ctx: web.Ctx) {
+  use _session <- web.auth_guard(ctx)
+
   use formdata <- wisp.require_form(req)
 
   let input = {
@@ -139,6 +143,8 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
 }
 
 pub fn create_page(req: wisp.Request, ctx: web.Ctx) {
+  use _session <- web.auth_guard(ctx)
+
   product_components.create_page()
   |> layout.component(req.path, ctx)
   |> element.to_document_string_tree
@@ -146,6 +152,8 @@ pub fn create_page(req: wisp.Request, ctx: web.Ctx) {
 }
 
 pub fn create_bought(ctx: web.Ctx, product_id: String) {
+  use _session <- web.auth_guard(ctx)
+
   let validator = {
     product_id
     |> valid.validate(product_validator.id_str)
@@ -191,6 +199,8 @@ pub fn create_bought(ctx: web.Ctx, product_id: String) {
 }
 
 pub fn delete_bought(ctx: web.Ctx, product_id: String) {
+  use _session <- web.auth_guard(ctx)
+
   let validator = {
     product_id
     |> valid.validate(product_validator.id_str)

@@ -21,10 +21,7 @@ import valid
 import wisp
 
 pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  //TODO: fn helper
-  let is_signed_in = option.is_some(ctx.session)
-
-  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
+  use <- web.guest_only(ctx)
 
   auth_components.sign_up_form(option.None, option.None)
   |> auth_components.sign_up_page()
@@ -34,10 +31,7 @@ pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 }
 
 pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  //TODO: fn helper
-  let is_signed_in = option.is_some(ctx.session)
-
-  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
+  use <- web.guest_only(ctx)
 
   use formdata <- wisp.require_form(req)
 
@@ -78,10 +72,8 @@ pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
         use user <- result.try(user)
 
-        //TODO: encapsulate this
         let session_id = wisp.random_string(64)
         let secret = wisp.random_string(64)
-
         let secret_hash = {
           secret |> bit_array.from_string |> auth_service.sha512_hash
         }
@@ -169,10 +161,7 @@ pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 }
 
 pub fn sign_in(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  //TODO: fn helper
-  let is_signed_in = option.is_some(ctx.session)
-
-  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
+  use <- web.guest_only(ctx)
 
   use formdata <- wisp.require_form(req)
 
@@ -212,10 +201,8 @@ pub fn sign_in(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
       return: Error(error.InvalidCredentials),
     )
 
-    //TODO: encapsulate this
     let session_id = wisp.random_string(64)
     let secret = wisp.random_string(64)
-
     let secret_hash = {
       secret |> bit_array.from_string |> auth_service.sha512_hash
     }
@@ -283,9 +270,7 @@ pub fn sign_in(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 }
 
 pub fn sign_in_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  let is_signed_in = option.is_some(ctx.session)
-
-  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
+  use <- web.guest_only(ctx)
 
   auth_components.sign_in_form(option.None, option.None)
   |> auth_components.sign_in_page()
@@ -295,17 +280,9 @@ pub fn sign_in_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 }
 
 pub fn sign_out(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  //TODO:AUTH GUARD FN
-  let session = option.to_result(ctx.session, error.Unauthorized)
-
-  use <- bool.guard(
-    when: result.is_error(session),
-    return: wisp.redirect(to: "/auth/sign-up"),
-  )
+  use session <- web.auth_guard(ctx)
 
   let result = {
-    use session <- result.try(session)
-
     let delete_session = session_repo.delete(session.id, ctx.db)
 
     use _ <- result.try(delete_session)

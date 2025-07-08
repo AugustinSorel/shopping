@@ -12,6 +12,23 @@ pub type Ctx {
   )
 }
 
+pub fn auth_guard(
+  ctx: Ctx,
+  cb: fn(session_model.Session) -> wisp.Response,
+) -> wisp.Response {
+  case ctx.session {
+    option.Some(session) -> cb(session)
+    option.None -> wisp.redirect(to: "/auth/sign-up")
+  }
+}
+
+pub fn guest_only(ctx: Ctx, cb: fn() -> wisp.Response) -> wisp.Response {
+  case ctx.session {
+    option.Some(_) -> wisp.redirect(to: "/")
+    option.None -> cb()
+  }
+}
+
 pub fn middleware(
   req: wisp.Request,
   handle_request: fn(wisp.Request) -> wisp.Response,
