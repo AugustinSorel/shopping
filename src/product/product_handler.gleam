@@ -19,7 +19,7 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
     Ok(product_service.ProductsByStatus(purchased, unpurchased)) -> {
       product_components.by_purchased_status(purchased, unpurchased)
       |> product_components.by_purchased_status_page
-      |> layout.component(req.path)
+      |> layout.component(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
     }
@@ -27,7 +27,7 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
       msg
       |> product_components.by_purchase_status_fallback
       |> product_components.by_purchased_status_page
-      |> layout.component(req.path)
+      |> layout.component(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }
@@ -35,7 +35,7 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
       "something went wrong"
       |> product_components.by_purchase_status_fallback
       |> product_components.by_purchased_status_page
-      |> layout.component(req.path)
+      |> layout.component(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }
@@ -162,9 +162,9 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
   }
 }
 
-pub fn create_page(req: wisp.Request) {
+pub fn create_page(req: wisp.Request, ctx: web.Ctx) {
   product_components.create_page()
-  |> layout.component(req.path)
+  |> layout.component(req.path, ctx)
   |> element.to_document_string_tree
   |> wisp.html_response(wisp.ok().status)
 }

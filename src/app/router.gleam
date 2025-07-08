@@ -23,7 +23,7 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     [] -> wisp.redirect(to: "/products")
 
     ["products"] -> products(req, ctx)
-    ["products", "create"] -> products_create(req)
+    ["products", "create"] -> products_create(req, ctx)
     ["products", product_id, "bought"] -> product_bought(req, ctx, product_id)
 
     ["auth", "sign-up"] -> sign_up(req, ctx)
@@ -48,9 +48,9 @@ fn sign_out(req: wisp.Request, ctx: web.Ctx) {
   session_handler.sign_out(req, ctx)
 }
 
-fn products_create(req: wisp.Request) -> wisp.Response {
+fn products_create(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
   case req.method {
-    http.Get -> product_handler.create_page(req)
+    http.Get -> product_handler.create_page(req, ctx)
 
     _ -> wisp.method_not_allowed([http.Get])
   }

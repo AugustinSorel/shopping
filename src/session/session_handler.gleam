@@ -35,7 +35,7 @@ pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     Ok(_) -> {
       auth_components.sign_up_form(option.None, option.None)
       |> auth_components.sign_up_page()
-      |> layout.component(req.path)
+      |> layout.component(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
     }
@@ -54,7 +54,7 @@ pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
       auth_components.sign_up_form(option.None, option.Some(errors))
       |> auth_components.sign_up_page()
-      |> layout.component(req.path)
+      |> layout.component(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }
@@ -70,7 +70,7 @@ pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
       auth_components.sign_up_form(option.None, option.Some(errors))
       |> auth_components.sign_up_page()
-      |> layout.component(req.path)
+      |> layout.component(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }

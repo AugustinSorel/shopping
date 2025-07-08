@@ -1,10 +1,15 @@
+import app/web
 import components/icon
 import gleam/bool
+import gleam/option
 import gleam/string
 import lustre/attribute
+import lustre/element
 import lustre/element/html
 
-pub fn component(current_path: String) {
+pub fn component(current_path: String, ctx: web.Ctx) {
+  use <- bool.guard(when: option.is_none(ctx.session), return: element.none())
+
   html.footer(
     [
       attribute.class(
