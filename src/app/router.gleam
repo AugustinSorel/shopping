@@ -34,9 +34,12 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 }
 
 fn sign_up(req: wisp.Request, ctx: web.Ctx) {
-  use <- wisp.require_method(req, http.Post)
+  case req.method {
+    http.Get -> session_handler.sign_up_page(req, ctx)
+    http.Post -> session_handler.sign_up(req, ctx)
 
-  session_handler.create(req, ctx)
+    _ -> wisp.method_not_allowed([http.Get, http.Post])
+  }
 }
 
 fn sign_out(req: wisp.Request, ctx: web.Ctx) {

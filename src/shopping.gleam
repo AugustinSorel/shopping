@@ -13,17 +13,18 @@ pub fn main() -> Nil {
 
   let env = env.load()
 
-  let db =
-    pog.default_config()
+  let assert Ok(db) =
+    process.new_name("db")
+    |> pog.default_config()
     |> pog.host(env.db_host)
     |> pog.password(option.Some(env.db_password))
     |> pog.user(env.db_user)
     |> pog.database(env.db_name)
     |> pog.port(env.db_port)
     |> pog.pool_size(15)
-    |> pog.connect
+    |> pog.start
 
-  let ctx = web.Ctx(db:, env:, session: option.None)
+  let ctx = web.Ctx(db: db.data, env:, session: option.None)
 
   let secret = wisp.random_string(64)
 

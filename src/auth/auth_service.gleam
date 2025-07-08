@@ -1,8 +1,14 @@
-import gleam/bit_array
+import antigone
 import gleam/crypto
 
-pub fn hash_secret(secret: String) {
-  let secret = secret |> bit_array.from_string
-
+pub fn sha512_hash(secret: BitArray) {
   crypto.hash(crypto.Sha512, secret)
+}
+
+pub fn sha512_compare(left: BitArray, right: BitArray) {
+  crypto.secure_compare(left, right)
+}
+
+pub fn hash_secret(secret: BitArray) {
+  antigone.hash(antigone.hasher(), secret)
 }

@@ -1,5 +1,5 @@
 import gleam/option
-import pog
+import gleam/time/timestamp
 
 pub type Product {
   Product(
@@ -8,8 +8,8 @@ pub type Product {
     quantity: Int,
     urgent: Bool,
     location: option.Option(String),
-    bought_at: option.Option(pog.Timestamp),
-    created_at: pog.Timestamp,
-    updated_at: pog.Timestamp,
+    bought_at: option.Option(timestamp.Timestamp),
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
   )
 }

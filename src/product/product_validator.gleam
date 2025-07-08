@@ -10,18 +10,18 @@ pub type Fields {
   Id
 }
 
-pub fn name() {
+pub fn title() {
   let error = fn(msg) { #(Title, msg) }
 
   validator.trim
-  |> valid.then(valid.string_is_not_empty(error("Title is required")))
+  |> valid.then(valid.string_is_not_empty(error("title  is required")))
   |> valid.then(valid.string_min_length(
     3,
-    error("product name must be at least 3 characters"),
+    error("title  must be at least 3 characters"),
   ))
   |> valid.then(valid.string_max_length(
     255,
-    error("product name must be at most 255 characters"),
+    error("title must be at most 255 characters"),
   ))
   |> validator.string_required(error("title is required"))
 }
@@ -96,7 +96,7 @@ pub type CreateOutput {
 }
 
 pub fn create(input: CreateInput) {
-  use title <- valid.check(input.title, name())
+  use title <- valid.check(input.title, title())
   use quantity <- valid.check(input.quantity, quantity())
   use location <- valid.check(input.location, location())
   use urgent <- valid.check(input.urgent, urgent())

@@ -1,16 +1,14 @@
-import app/db
 import app/error
 import app/web
 import auth/auth_service
+import gleam/bit_array
 import gleam/bool
-import gleam/crypto
 import gleam/float
 import gleam/order
 import gleam/result
 import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp
-import pog
 import session/session_model
 import session/session_repo
 import wisp
@@ -34,9 +32,9 @@ pub fn decode_token(token: String) {
   }
 }
 
-pub fn is_session_expired(created_at: pog.Timestamp) {
+pub fn is_session_expired(created_at: timestamp.Timestamp) {
   let now = timestamp.system_time()
-  let session_creation = created_at |> db.pog_timestamp_to_timestamp
+  let session_creation = created_at
 
   let session_age = timestamp.difference(now, session_creation)
 
@@ -48,11 +46,9 @@ pub fn is_session_expired(created_at: pog.Timestamp) {
   }
 }
 
-pub fn should_refresh_session(last_verified_at: pog.Timestamp) {
+pub fn should_refresh_session(last_verified_at: timestamp.Timestamp) {
   let now = timestamp.system_time()
-  let session_last_verified_at =
-    last_verified_at |> db.pog_timestamp_to_timestamp
-
+  let session_last_verified_at = last_verified_at
   let age = timestamp.difference(now, session_last_verified_at)
 
   let max_age = duration.hours(24)
@@ -108,12 +104,11 @@ pub fn validate(candidate_token: String, ctx: web.Ctx) {
 
   use _ <- result.try(session_expired)
 
-  let candidate_secret_hash = {
-    auth_service.hash_secret(decoded_token.session_secret)
-  }
-
   let valid_secret = {
-    crypto.secure_compare(candidate_secret_hash, session.secret_hash)
+    decoded_token.session_secret
+    |> bit_array.from_string
+    |> auth_service.sha512_hash
+    |> auth_service.sha512_compare(session.secret_hash)
   }
 
   use <- bool.guard(

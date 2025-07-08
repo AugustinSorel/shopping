@@ -9,11 +9,18 @@ pub type AppError {
     location: option.Option(List(String)),
     urgent: option.Option(List(String)),
   )
+  SignUpValidation(
+    email: option.Option(List(String)),
+    password: option.Option(List(String)),
+    confirm_password: option.Option(List(String)),
+  )
   Internal(msg: String)
   SessionExpired
   SessionTokenValidation
   SessionSecretInvalid
   Unauthorized
+  AlreadySignedIn
+  UserConflict
 }
 
 pub fn messages_for(field: a, errors: List(#(a, b))) -> option.Option(List(b)) {

@@ -1,13 +1,13 @@
-import pog
+import gleam/time/timestamp
 
 pub type Session {
   Session(
     id: String,
     user_id: Int,
     secret_hash: BitArray,
-    last_verified_at: pog.Timestamp,
-    created_at: pog.Timestamp,
-    updated_at: pog.Timestamp,
+    last_verified_at: timestamp.Timestamp,
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
   )
 }
 

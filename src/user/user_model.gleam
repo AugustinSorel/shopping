@@ -1,12 +1,12 @@
-import pog
+import gleam/time/timestamp
 
 pub type User {
   User(
     id: Int,
     email: String,
     password: String,
-    created_at: pog.Timestamp,
-    updated_at: pog.Timestamp,
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
   )
 }
 
