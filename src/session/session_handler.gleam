@@ -21,60 +21,15 @@ import valid
 import wisp
 
 pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  let result = {
-    let is_signed_in = {
-      option.to_result(ctx.session, error.Unauthorized) |> result.is_ok
-    }
+  let is_signed_in = option.is_some(ctx.session)
 
-    use <- bool.guard(when: is_signed_in, return: Error(error.AlreadySignedIn))
+  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
 
-    Ok(Nil)
-  }
-
-  case result {
-    Ok(_) -> {
-      auth_components.sign_up_form(option.None, option.None)
-      |> auth_components.sign_up_page()
-      |> layout.component(req.path, ctx)
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.ok().status)
-    }
-    Error(error.AlreadySignedIn) -> {
-      wisp.redirect(to: "/")
-    }
-    Error(error.Internal(msg)) -> {
-      let errors = {
-        auth_components.SignUpErrors(
-          root: option.Some(msg),
-          email: option.None,
-          password: option.None,
-          confirm_password: option.None,
-        )
-      }
-
-      auth_components.sign_up_form(option.None, option.Some(errors))
-      |> auth_components.sign_up_page()
-      |> layout.component(req.path, ctx)
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.internal_server_error().status)
-    }
-    Error(_e) -> {
-      let errors = {
-        auth_components.SignUpErrors(
-          root: option.Some("something went wrong"),
-          email: option.None,
-          password: option.None,
-          confirm_password: option.None,
-        )
-      }
-
-      auth_components.sign_up_form(option.None, option.Some(errors))
-      |> auth_components.sign_up_page()
-      |> layout.component(req.path, ctx)
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.internal_server_error().status)
-    }
-  }
+  auth_components.sign_up_form(option.None, option.None)
+  |> auth_components.sign_up_page()
+  |> layout.component(req.path, ctx)
+  |> element.to_document_string_tree
+  |> wisp.html_response(wisp.ok().status)
 }
 
 pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
@@ -234,6 +189,18 @@ pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
       |> wisp.html_response(wisp.internal_server_error().status)
     }
   }
+}
+
+pub fn sign_in_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
+  let is_signed_in = option.is_some(ctx.session)
+
+  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
+
+  auth_components.sign_in_form(option.None, option.None)
+  |> auth_components.sign_in_page()
+  |> layout.component(req.path, ctx)
+  |> element.to_document_string_tree
+  |> wisp.html_response(wisp.ok().status)
 }
 
 pub fn sign_out(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {

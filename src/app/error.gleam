@@ -19,7 +19,6 @@ pub type AppError {
   SessionTokenValidation
   SessionSecretInvalid
   Unauthorized
-  AlreadySignedIn
   UserConflict
 }
 

@@ -10,18 +10,6 @@ pub type Fields {
   ConfirmPassword
 }
 
-pub type SignUpInput {
-  SignUpInput(
-    email: option.Option(String),
-    password: option.Option(String),
-    confirm_password: option.Option(String),
-  )
-}
-
-pub type SignUpOutput {
-  SignUpOutput(email: String, password: String, confirm_password: String)
-}
-
 pub fn email() {
   let error = fn(msg) { #(Email, msg) }
 
@@ -66,6 +54,18 @@ pub fn confirm_password(password: String) {
   }
 }
 
+pub type SignUpInput {
+  SignUpInput(
+    email: option.Option(String),
+    password: option.Option(String),
+    confirm_password: option.Option(String),
+  )
+}
+
+pub type SignUpOutput {
+  SignUpOutput(email: String, password: String, confirm_password: String)
+}
+
 pub fn sign_up(input: SignUpInput) {
   use email <- valid.check(input.email, email())
   use password <- valid.check(input.password, password())
@@ -75,4 +75,19 @@ pub fn sign_up(input: SignUpInput) {
   )
 
   valid.ok(SignUpOutput(email:, password:, confirm_password:))
+}
+
+pub type SignInInput {
+  SignInInput(email: option.Option(String), password: option.Option(String))
+}
+
+pub type SignInOutput {
+  SignInOutput(email: String, password: String)
+}
+
+pub fn sign_in(input: SignInInput) {
+  use email <- valid.check(input.email, email())
+  use password <- valid.check(input.password, password())
+
+  valid.ok(SignInOutput(email:, password:))
 }

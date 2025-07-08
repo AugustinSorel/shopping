@@ -27,6 +27,7 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["products", product_id, "bought"] -> product_bought(req, ctx, product_id)
 
     ["auth", "sign-up"] -> sign_up(req, ctx)
+    ["auth", "sign-in"] -> sign_in(req, ctx)
     ["auth", "sign-out"] -> sign_out(req, ctx)
 
     _ -> wisp.not_found()
@@ -38,6 +39,15 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> session_handler.sign_up_page(req, ctx)
     http.Post -> session_handler.sign_up(req, ctx)
 
+    _ -> wisp.method_not_allowed([http.Get, http.Post])
+  }
+}
+
+fn sign_in(req: wisp.Request, ctx: web.Ctx) {
+  case req.method {
+    http.Get -> session_handler.sign_in_page(req, ctx)
+
+    // http.Post -> session_handler.sign_in(req, ctx)
     _ -> wisp.method_not_allowed([http.Get, http.Post])
   }
 }
