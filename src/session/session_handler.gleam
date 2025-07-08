@@ -21,6 +21,7 @@ import valid
 import wisp
 
 pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
+  //TODO: fn helper
   let is_signed_in = option.is_some(ctx.session)
 
   use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
@@ -33,6 +34,11 @@ pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 }
 
 pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
+  //TODO: fn helper
+  let is_signed_in = option.is_some(ctx.session)
+
+  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
+
   use formdata <- wisp.require_form(req)
 
   let input = {
@@ -72,6 +78,7 @@ pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
         use user <- result.try(user)
 
+        //TODO: encapsulate this
         let session_id = wisp.random_string(64)
         let secret = wisp.random_string(64)
 
@@ -108,28 +115,6 @@ pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
       |> wisp.set_header("hx-redirect", "/")
       |> session_service.set_cookie(req, token)
     }
-    Error(error.UserConflict) -> {
-      let errors = {
-        auth_components.SignUpErrors(
-          root: option.Some("email address already used"),
-          email: option.None,
-          password: option.None,
-          confirm_password: option.None,
-        )
-      }
-
-      let input = {
-        auth_components.SignUpValues(
-          email: input.email,
-          password: input.password,
-          confirm_password: input.confirm_password,
-        )
-      }
-
-      auth_components.sign_up_form(option.Some(input), option.Some(errors))
-      |> element.to_document_string_tree
-      |> wisp.html_response(409)
-    }
     Error(error.SignUpValidation(email, password, confirm_password)) -> {
       let errors = {
         auth_components.SignUpErrors(
@@ -152,7 +137,13 @@ pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.unprocessable_entity().status)
     }
-    Error(error.Internal(msg)) -> {
+    Error(e) -> {
+      let msg = case e {
+        error.UserConflict -> "email already used"
+        error.Internal(msg) -> msg
+        _ -> "something went wrong"
+      }
+
       let errors = {
         auth_components.SignUpErrors(
           root: option.Some(msg),
@@ -174,17 +165,117 @@ pub fn sign_up(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }
-    Error(_e) -> {
+  }
+}
+
+pub fn sign_in(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
+  //TODO: fn helper
+  let is_signed_in = option.is_some(ctx.session)
+
+  use <- bool.guard(when: is_signed_in, return: wisp.redirect(to: "/"))
+
+  use formdata <- wisp.require_form(req)
+
+  let input = {
+    auth_validator.SignInInput(
+      email: list.key_find(formdata.values, "email") |> option.from_result,
+      password: list.key_find(formdata.values, "password") |> option.from_result,
+    )
+  }
+
+  let validator = {
+    input
+    |> valid.validate(auth_validator.sign_in)
+    |> result.map_error(fn(errors) {
+      error.SignInValidation(
+        email: error.messages_for(auth_validator.Email, errors),
+        password: error.messages_for(auth_validator.Password, errors),
+      )
+    })
+  }
+
+  let result = {
+    use candidate_user <- result.try(validator)
+
+    let user = user_repo.get_by_email(candidate_user.email, ctx.db)
+
+    use user <- result.try(user)
+
+    let password_valid = {
+      candidate_user.password
+      |> bit_array.from_string
+      |> auth_service.hash_verify(user.password)
+    }
+
+    use <- bool.guard(
+      when: !password_valid,
+      return: Error(error.InvalidCredentials),
+    )
+
+    //TODO: encapsulate this
+    let session_id = wisp.random_string(64)
+    let secret = wisp.random_string(64)
+
+    let secret_hash = {
+      secret |> bit_array.from_string |> auth_service.sha512_hash
+    }
+
+    let token = session_service.encode_token(session_id, secret)
+
+    let session = session_repo.create(session_id, secret_hash, user.id, ctx.db)
+
+    use _session <- result.try(session)
+
+    Ok(token)
+  }
+
+  case result {
+    Ok(token) -> {
+      wisp.ok()
+      |> wisp.set_header("hx-redirect", "/")
+      |> session_service.set_cookie(req, token)
+    }
+    Error(error.SignInValidation(email, password)) -> {
       let errors = {
-        auth_components.SignUpErrors(
-          root: option.Some("something went wrong"),
-          email: option.None,
-          password: option.None,
-          confirm_password: option.None,
+        auth_components.SignInErrors(root: option.None, email:, password:)
+      }
+
+      let input = {
+        auth_components.SignInValues(
+          email: input.email,
+          password: input.password,
         )
       }
 
-      auth_components.sign_up_form(option.None, option.Some(errors))
+      auth_components.sign_in_form(option.Some(input), option.Some(errors))
+      |> element.to_document_string_tree
+      |> wisp.html_response(wisp.unprocessable_entity().status)
+    }
+    Error(e) -> {
+      let msg = case e {
+        error.Internal(msg) -> msg
+        error.UserNotFound | error.InvalidCredentials -> {
+          "email or password is incorrect"
+        }
+        _ -> "something went wrong"
+      }
+
+      let errors = {
+        auth_components.SignInErrors(
+          root: option.Some(msg),
+          email: option.None,
+          password: option.None,
+        )
+      }
+
+      let input = {
+        auth_components.SignInValues(
+          email: input.email,
+          password: input.password,
+        )
+      }
+
+      auth_components.sign_in_form(option.Some(input), option.Some(errors))
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }
@@ -204,38 +295,37 @@ pub fn sign_in_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 }
 
 pub fn sign_out(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
-  let result = {
-    let session = option.to_result(ctx.session, error.Unauthorized)
+  //TODO:AUTH GUARD FN
+  let session = option.to_result(ctx.session, error.Unauthorized)
 
+  use <- bool.guard(
+    when: result.is_error(session),
+    return: wisp.redirect(to: "/auth/sign-up"),
+  )
+
+  let result = {
     use session <- result.try(session)
 
     let delete_session = session_repo.delete(session.id, ctx.db)
 
     use _ <- result.try(delete_session)
 
-    Ok(session)
+    Ok(Nil)
   }
 
   case result {
-    Ok(_session) -> {
+    Ok(_) -> {
       wisp.ok() |> session_service.delete_cookie(req)
     }
-    Error(error.Unauthorized) -> {
-      wisp.redirect(to: "/auth/sign-up")
-    }
-    Error(error.Internal(msg)) -> {
+    Error(e) -> {
+      let msg = case e {
+        error.Internal(msg) -> msg
+        _ -> "something went wrong"
+      }
+
       alert.alert(alert.Destructive, [], [
         icon.circle_alert([]),
-        alert.title([], [html.text("something went wrong!")]),
-        alert.description([], [html.text(msg)]),
-      ])
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.internal_server_error().status)
-    }
-    Error(_e) -> {
-      alert.alert(alert.Destructive, [], [
-        icon.circle_alert([]),
-        alert.title([], [html.text("something went wrong!")]),
+        alert.title([], [html.text(msg)]),
         alert.description([], [html.text("something went wrong!")]),
       ])
       |> element.to_document_string_tree

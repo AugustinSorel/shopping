@@ -14,12 +14,18 @@ pub type AppError {
     password: option.Option(List(String)),
     confirm_password: option.Option(List(String)),
   )
+  SignInValidation(
+    email: option.Option(List(String)),
+    password: option.Option(List(String)),
+  )
   Internal(msg: String)
   SessionExpired
   SessionTokenValidation
   SessionSecretInvalid
   Unauthorized
   UserConflict
+  UserNotFound
+  InvalidCredentials
 }
 
 pub fn messages_for(field: a, errors: List(#(a, b))) -> option.Option(List(b)) {

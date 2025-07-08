@@ -183,7 +183,7 @@ pub fn sign_in_form(
 ) {
   html.form(
     [
-      attribute.attribute("hx-post", "/auth/sign-up"),
+      attribute.attribute("hx-post", "/auth/sign-in"),
       attribute.attribute("hx-target", "this"),
       attribute.attribute("hx-swap", "outerHTML"),
       attribute.class("flex flex-col gap-10"),

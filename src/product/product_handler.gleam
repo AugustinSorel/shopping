@@ -23,16 +23,11 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
     }
-    Error(error.Internal(msg)) -> {
-      msg
-      |> product_components.by_purchase_status_fallback
-      |> product_components.by_purchased_status_page
-      |> layout.component(req.path, ctx)
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.internal_server_error().status)
-    }
-    Error(_) -> {
-      "something went wrong"
+    Error(e) -> {
+      case e {
+        error.Internal(msg) -> msg
+        _ -> "something went wrong"
+      }
       |> product_components.by_purchase_status_fallback
       |> product_components.by_purchased_status_page
       |> layout.component(req.path, ctx)
@@ -111,34 +106,15 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.unprocessable_entity().status)
     }
-    Error(error.Internal(msg)) -> {
+    Error(e) -> {
+      let msg = case e {
+        error.Internal(msg) -> msg
+        _ -> "something went wrong"
+      }
+
       let errors = {
         product_components.CreateProductErrors(
           root: option.Some(msg),
-          title: option.None,
-          quantity: option.None,
-          location: option.None,
-          urgent: option.None,
-        )
-      }
-
-      let input = {
-        product_components.CreateProductInput(
-          title: input.title,
-          quantity: input.quantity,
-          location: input.location,
-          urgent: input.urgent,
-        )
-      }
-
-      product_components.create_form(option.Some(input), option.Some(errors))
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.unprocessable_entity().status)
-    }
-    Error(_) -> {
-      let errors = {
-        product_components.CreateProductErrors(
-          root: option.Some("something went wrong"),
           title: option.None,
           quantity: option.None,
           location: option.None,
@@ -202,13 +178,12 @@ pub fn create_bought(ctx: web.Ctx, product_id: String) {
       |> wisp.set_header("hx-retarget", "main")
       |> wisp.set_header("hx-reswap", "outerHTML")
     }
-    Error(error.Internal(msg)) -> {
-      product_components.item_fallback(msg)
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.internal_server_error().status)
-    }
-    Error(_) -> {
-      product_components.item_fallback(msg: "something went wrong")
+    Error(e) -> {
+      case e {
+        error.Internal(msg) -> msg
+        _ -> "something went wrong"
+      }
+      |> product_components.item_fallback()
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }
@@ -248,13 +223,12 @@ pub fn delete_bought(ctx: web.Ctx, product_id: String) {
       |> wisp.set_header("hx-retarget", "main")
       |> wisp.set_header("hx-reswap", "outerHTML")
     }
-    Error(error.Internal(msg)) -> {
-      product_components.item_fallback(msg)
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.internal_server_error().status)
-    }
-    Error(_) -> {
-      product_components.item_fallback(msg: "something went wrong")
+    Error(e) -> {
+      case e {
+        error.Internal(msg) -> msg
+        _ -> "something went wrong"
+      }
+      |> product_components.item_fallback()
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }

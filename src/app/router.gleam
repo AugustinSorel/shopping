@@ -46,8 +46,8 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
 fn sign_in(req: wisp.Request, ctx: web.Ctx) {
   case req.method {
     http.Get -> session_handler.sign_in_page(req, ctx)
+    http.Post -> session_handler.sign_in(req, ctx)
 
-    // http.Post -> session_handler.sign_in(req, ctx)
     _ -> wisp.method_not_allowed([http.Get, http.Post])
   }
 }
