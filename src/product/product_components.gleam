@@ -3,6 +3,7 @@ import components/button
 import components/checkbox
 import components/icon
 import components/input
+import components/spinner
 import gleam/int
 import gleam/list
 import gleam/option
@@ -73,6 +74,7 @@ pub fn create_form(
       attribute.attribute("hx-post", "/products"),
       attribute.attribute("hx-target", "this"),
       attribute.attribute("hx-swap", "outerHTML"),
+      attribute.attribute("hx-disabled-elt", "find button[type='submit']"),
       attribute.class("flex flex-col gap-10"),
     ],
     [
@@ -214,7 +216,12 @@ pub fn create_form(
           ]),
         ],
       ),
-      button.component(button.Default, button.Medium, [], [html.text("create")]),
+      button.component(
+        button.Default,
+        button.Medium,
+        [attribute.type_("submit")],
+        [html.text("create"), spinner.component([], icon.Small)],
+      ),
       case errors {
         option.Some(CreateProductErrors(root: option.Some(e), ..)) -> {
           alert.alert(alert.Destructive, [], [

@@ -2,6 +2,7 @@ import components/alert
 import components/button
 import components/icon
 import components/input
+import components/spinner
 import gleam/option
 import lustre/attribute
 import lustre/element
@@ -25,7 +26,7 @@ pub type SignUpErrors {
 }
 
 pub fn sign_up_page(children: element.Element(msg)) {
-  html.main([attribute.class("max-w-app mx-auto py-10 space-y-10")], [
+  html.main([attribute.class("max-w-app mx-auto py-10 space-y-15")], [
     html.h1(
       [
         attribute.class(
@@ -35,6 +36,14 @@ pub fn sign_up_page(children: element.Element(msg)) {
       [html.text("welcome")],
     ),
     children,
+    html.p([attribute.class("text-secondary text-sm text-center")], [
+      html.text("already got an account? "),
+      html.a([attribute.href("/auth/sign-in")], [
+        html.span([attribute.class("text-primary hover:underline")], [
+          html.text("sign-in"),
+        ]),
+      ]),
+    ]),
   ])
 }
 
@@ -47,7 +56,8 @@ pub fn sign_up_form(
       attribute.attribute("hx-post", "/auth/sign-up"),
       attribute.attribute("hx-target", "this"),
       attribute.attribute("hx-swap", "outerHTML"),
-      attribute.class("flex flex-col gap-10"),
+      attribute.attribute("hx-disabled-elt", "find button[type='submit']"),
+      attribute.class("flex flex-col gap-5"),
     ],
     [
       html.label([attribute.class("flex flex-col gap-1")], [
@@ -128,15 +138,12 @@ pub fn sign_up_form(
           _ -> element.none()
         },
       ]),
-      button.component(button.Default, button.Medium, [], [html.text("create")]),
-      html.p([attribute.class("text-secondary text-sm text-center")], [
-        html.text("already got an account? "),
-        html.a([attribute.href("/auth/sign-in")], [
-          html.span([attribute.class("text-primary hover:underline")], [
-            html.text("sign-in"),
-          ]),
-        ]),
-      ]),
+      button.component(
+        button.Default,
+        button.Medium,
+        [attribute.type_("submit")],
+        [html.text("sign up"), spinner.component([], icon.Small)],
+      ),
       case errors {
         option.Some(SignUpErrors(root: option.Some(e), ..)) -> {
           alert.alert(alert.Destructive, [], [
@@ -164,7 +171,7 @@ pub type SignInErrors {
 }
 
 pub fn sign_in_page(children: element.Element(msg)) {
-  html.main([attribute.class("max-w-app mx-auto py-10 space-y-10")], [
+  html.main([attribute.class("max-w-app mx-auto py-10 space-y-15")], [
     html.h1(
       [
         attribute.class(
@@ -174,6 +181,14 @@ pub fn sign_in_page(children: element.Element(msg)) {
       [html.text("welcome back!")],
     ),
     children,
+    html.p([attribute.class("text-secondary text-sm text-center")], [
+      html.text("don't have an account? "),
+      html.a([attribute.href("/auth/sign-up")], [
+        html.span([attribute.class("text-primary hover:underline")], [
+          html.text("sign-up"),
+        ]),
+      ]),
+    ]),
   ])
 }
 
@@ -186,7 +201,8 @@ pub fn sign_in_form(
       attribute.attribute("hx-post", "/auth/sign-in"),
       attribute.attribute("hx-target", "this"),
       attribute.attribute("hx-swap", "outerHTML"),
-      attribute.class("flex flex-col gap-10"),
+      attribute.attribute("hx-disabled-elt", "find button[type='submit']"),
+      attribute.class("flex flex-col gap-5"),
     ],
     [
       html.label([attribute.class("flex flex-col gap-1")], [
@@ -239,15 +255,12 @@ pub fn sign_in_form(
           _ -> element.none()
         },
       ]),
-      button.component(button.Default, button.Medium, [], [html.text("create")]),
-      html.p([attribute.class("text-secondary text-sm text-center")], [
-        html.text("don't have an account? "),
-        html.a([attribute.href("/auth/sign-up")], [
-          html.span([attribute.class("text-primary hover:underline")], [
-            html.text("sign-up"),
-          ]),
-        ]),
-      ]),
+      button.component(
+        button.Default,
+        button.Medium,
+        [attribute.type_("submit")],
+        [html.text("sign in"), spinner.component([], icon.Small)],
+      ),
       case errors {
         option.Some(SignInErrors(root: option.Some(e), ..)) -> {
           alert.alert(alert.Destructive, [], [

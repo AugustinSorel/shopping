@@ -1,9 +1,16 @@
+import gleam/list
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/element/svg
 
+pub type Size {
+  Small
+  Medium
+}
+
 fn icon(
+  size: Size,
   attr: List(attribute.Attribute(msg)),
   children: List(element.Element(msg)),
 ) {
@@ -11,22 +18,25 @@ fn icon(
     "fill-none stroke-current group-aria-[current='true']:fill-current"
   }
 
+  let size_attrs = case size {
+    Small -> [attribute.height(16), attribute.width(16)]
+    Medium -> [attribute.height(24), attribute.width(24)]
+  }
+
   html.svg(
     [
-      attribute.height(24),
-      attribute.width(24),
       attribute.attribute("viewbox", "0 0 24 24"),
       attribute.attribute("stroke-linecap", "round"),
       attribute.attribute("stroke-linejoin", "round"),
       attribute.class(class),
-      ..attr
+      ..list.append(attr, size_attrs)
     ],
     children,
   )
 }
 
 pub fn home(attr: List(attribute.Attribute(msg))) {
-  icon(attr, [
+  icon(Medium, attr, [
     svg.path([
       attribute.attribute(
         "d",
@@ -37,7 +47,7 @@ pub fn home(attr: List(attribute.Attribute(msg))) {
 }
 
 pub fn circle_plus(attr: List(attribute.Attribute(msg))) {
-  icon(attr, [
+  icon(Medium, attr, [
     svg.circle([
       attribute.attribute("cx", "12"),
       attribute.attribute("cy", "12"),
@@ -49,7 +59,7 @@ pub fn circle_plus(attr: List(attribute.Attribute(msg))) {
 }
 
 pub fn user(attr: List(attribute.Attribute(msg))) {
-  icon(attr, [
+  icon(Medium, attr, [
     svg.path([
       attribute.attribute("d", "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"),
     ]),
@@ -62,7 +72,7 @@ pub fn user(attr: List(attribute.Attribute(msg))) {
 }
 
 pub fn circle_alert(attr: List(attribute.Attribute(msg))) {
-  icon(attr, [
+  icon(Medium, attr, [
     svg.circle([
       attribute.attribute("cx", "12"),
       attribute.attribute("cy", "12"),
@@ -83,8 +93,8 @@ pub fn circle_alert(attr: List(attribute.Attribute(msg))) {
   ])
 }
 
-pub fn spinner(attr: List(attribute.Attribute(msg))) {
-  icon(attr, [
+pub fn spinner(attr: List(attribute.Attribute(msg)), size: Size) {
+  icon(size, attr, [
     svg.path([attribute.attribute("d", "M12 2v4")]),
     svg.path([attribute.attribute("d", "m16.2 7.8 2.9-2.9")]),
     svg.path([attribute.attribute("d", "M18 12h4")]),
