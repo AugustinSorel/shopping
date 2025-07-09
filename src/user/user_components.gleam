@@ -42,11 +42,19 @@ pub fn avatar(name: String) {
       attribute.styles([
         #(
           "background",
-          string.concat(["hsl(", get_hue_from_string(initial), ",50%,98%)"]),
+          "light-dark(hsl("
+            <> get_hue_from_string(initial)
+            <> " 50% 98%), hsl("
+            <> get_hue_from_string(initial)
+            <> " 50% 6%))",
         ),
         #(
           "color",
-          string.concat(["hsl(", get_hue_from_string(initial), ",50%,40%)"]),
+          "light-dark(hsl("
+            <> get_hue_from_string(initial)
+            <> " 50% 40%), hsl("
+            <> get_hue_from_string(initial)
+            <> " 50% 60%))",
         ),
       ]),
     ],
