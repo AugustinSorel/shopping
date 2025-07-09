@@ -21,12 +21,10 @@ valid = ">= 5.0.0 and < 6.0.0"
 lustre = ">= 5.2.1 and < 6.0.0"
 glailwind_merge = ">= 1.1.0 and < 2.0.0"
 gleam_time = ">= 1.2.0 and < 2.0.0"
-gleam_regexp = ">= 1.1.1 and < 2.0.0"
 dot_env = ">= 1.2.0 and < 2.0.0"
 gleam_crypto = ">= 1.5.1 and < 2.0.0"
 antigone = ">= 1.1.0 and < 2.0.0"
 gleam_erlang = ">= 1.2.0 and < 2.0.0"
-exception = ">= 2.1.0 and < 3.0.0"
 pog = ">= 4.0.0 and < 5.0.0"
 
 [dev-dependencies]
