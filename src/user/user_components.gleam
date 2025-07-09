@@ -1,6 +1,7 @@
 import components/button
 import components/icon
 import components/spinner
+import components/theme
 import gleam/int
 import gleam/list
 import gleam/result
@@ -120,7 +121,7 @@ pub fn preference() {
         ],
         [
           html.dt([], [html.text("theme")]),
-          html.dd([], [html.text("theme")]),
+          html.dd([], [theme.switcher()]),
           html.dt([], [html.text("session")]),
           html.dd([], [
             button.component(

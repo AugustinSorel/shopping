@@ -1,5 +1,6 @@
 import app/web
 import components/footer
+import components/theme
 import lustre/attribute
 import lustre/element
 import lustre/element/html
@@ -16,6 +17,11 @@ pub fn component(
         attribute.name("viewport"),
         attribute.content("width=device-width, initial-scale=1"),
       ]),
+      html.link([
+        attribute.href("/static/styles.css"),
+        attribute.rel("stylesheet"),
+      ]),
+      theme.blocking_script(),
       html.script(
         [
           attribute.src(
@@ -24,10 +30,10 @@ pub fn component(
         ],
         "",
       ),
-      html.link([
-        attribute.href("/static/styles.css"),
-        attribute.rel("stylesheet"),
-      ]),
+      html.script(
+        [attribute.src("https://unpkg.com/hyperscript.org@0.9.14")],
+        "",
+      ),
       html.meta([
         attribute.name("htmx-config"),
         attribute.content(
