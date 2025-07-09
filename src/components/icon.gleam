@@ -1,8 +1,10 @@
+import glailwind_merge
 import gleam/list
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/element/svg
+import styles/styles_utils
 
 pub type Size {
   Small
@@ -14,7 +16,7 @@ fn icon(
   attr: List(attribute.Attribute(msg)),
   children: List(element.Element(msg)),
 ) {
-  let class = {
+  let base_class = {
     "fill-none stroke-current group-aria-[current='true']:fill-current"
   }
 
@@ -22,6 +24,10 @@ fn icon(
     Small -> [attribute.height(16), attribute.width(16)]
     Medium -> [attribute.height(24), attribute.width(24)]
   }
+
+  let attr_class = styles_utils.extract_class(attr)
+
+  let class = glailwind_merge.tw_merge([attr_class, base_class])
 
   html.svg(
     [

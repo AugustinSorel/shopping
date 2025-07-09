@@ -2,6 +2,7 @@ import glailwind_merge
 import lustre/attribute
 import lustre/element
 import lustre/element/html
+import styles/styles_utils
 
 pub type Variant {
   Default
@@ -24,7 +25,9 @@ pub fn alert(
     }
   }
 
-  let class = glailwind_merge.tw_merge([base_class, variant_class])
+  let attr_class = styles_utils.extract_class(attr)
+
+  let class = glailwind_merge.tw_merge([base_class, variant_class, attr_class])
 
   html.div([attribute.role("alert"), attribute.class(class), ..attr], children)
 }

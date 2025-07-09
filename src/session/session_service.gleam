@@ -93,7 +93,7 @@ pub fn validate(candidate_token: String, ctx: web.Ctx) {
     ctx.db,
   ))
 
-  let session_expired = case is_session_expired(session.created_at) {
+  let session_expired = case is_session_expired(session.last_verified_at) {
     True -> {
       session_repo.delete(decoded_token.session_id, ctx.db)
       |> result.unwrap_error(error.SessionExpired)

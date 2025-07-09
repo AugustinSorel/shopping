@@ -5,6 +5,7 @@ import gleam/result
 import product/product_handler
 import session/session_handler
 import session/session_service
+import user/user_handler
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
@@ -30,8 +31,16 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["auth", "sign-in"] -> sign_in(req, ctx)
     ["auth", "sign-out"] -> sign_out(req, ctx)
 
+    ["users", "account"] -> users_account(req, ctx)
+
     _ -> wisp.not_found()
   }
+}
+
+fn users_account(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Get)
+
+  user_handler.account_page(req, ctx)
 }
 
 fn sign_up(req: wisp.Request, ctx: web.Ctx) {

@@ -2,9 +2,11 @@ import glailwind_merge
 import lustre/attribute
 import lustre/element
 import lustre/element/html
+import styles/styles_utils
 
 pub type Variant {
   Default
+  Ghost
 }
 
 pub type Size {
@@ -25,13 +27,20 @@ pub fn component(
     Default -> {
       "bg-primary text-on-primary hover:bg-primary/90 font-bold focus-visible:ring-primary"
     }
+    Ghost -> {
+      "hover:bg-accent hover:text-accent-foreground"
+    }
   }
 
   let size_class = case size {
     Medium -> "h-10 px-4 py-2 rounded-md"
   }
 
-  let class = glailwind_merge.tw_merge([base_class, variant_class, size_class])
+  let attr_class = styles_utils.extract_class(attr)
+
+  let class = {
+    glailwind_merge.tw_merge([base_class, variant_class, size_class, attr_class])
+  }
 
   html.button([attribute.class(class), ..attr], children)
 }

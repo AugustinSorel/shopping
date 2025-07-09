@@ -8,13 +8,13 @@ pub type Ctx {
   Ctx(
     db: pog.Connection,
     env: env.Env,
-    session: option.Option(session_model.Session),
+    session: option.Option(session_model.SessionWithUser),
   )
 }
 
 pub fn auth_guard(
   ctx: Ctx,
-  cb: fn(session_model.Session) -> wisp.Response,
+  cb: fn(session_model.SessionWithUser) -> wisp.Response,
 ) -> wisp.Response {
   case ctx.session {
     option.Some(session) -> cb(session)

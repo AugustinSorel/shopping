@@ -2,6 +2,7 @@ import app/error
 import gleam/dynamic/decode
 import pog
 import session/session_model
+import user/user_model
 
 pub fn create(
   id id: String,
@@ -47,24 +48,21 @@ pub fn create(
 
 pub fn get_by_id(id: String, db: pog.Connection) {
   let query = {
-    "select * from sessions where sessions.id = $1"
+    "select sessions.id, sessions.last_verified_at, sessions.secret_hash, users.id, users.email from sessions inner join users on users.id = sessions.user_id where sessions.id = $1"
   }
 
   let row_decoder = {
-    use id <- decode.field(0, decode.string)
-    use user_id <- decode.field(1, decode.int)
+    use session_id <- decode.field(0, decode.string)
+    use last_verified_at <- decode.field(1, pog.timestamp_decoder())
     use secret_hash <- decode.field(2, decode.bit_array)
-    use last_verified_at <- decode.field(3, pog.timestamp_decoder())
-    use created_at <- decode.field(4, pog.timestamp_decoder())
-    use updated_at <- decode.field(5, pog.timestamp_decoder())
+    use user_id <- decode.field(3, decode.int)
+    use email <- decode.field(4, decode.string)
 
-    decode.success(session_model.Session(
-      id:,
-      user_id:,
-      secret_hash:,
+    decode.success(session_model.SessionWithUser(
+      id: session_id,
       last_verified_at:,
-      created_at:,
-      updated_at:,
+      secret_hash:,
+      user: user_model.CtxUser(id: user_id, email:),
     ))
   }
 

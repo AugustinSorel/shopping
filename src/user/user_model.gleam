@@ -11,5 +11,5 @@ pub type User {
 }
 
 pub type CtxUser {
-  CtxUser(id: Int)
+  CtxUser(id: Int, email: String)
 }

@@ -1,4 +1,5 @@
 import gleam/time/timestamp
+import user/user_model
 
 pub type Session {
   Session(
@@ -8,6 +9,15 @@ pub type Session {
     last_verified_at: timestamp.Timestamp,
     created_at: timestamp.Timestamp,
     updated_at: timestamp.Timestamp,
+  )
+}
+
+pub type SessionWithUser {
+  SessionWithUser(
+    id: String,
+    last_verified_at: timestamp.Timestamp,
+    secret_hash: BitArray,
+    user: user_model.CtxUser,
   )
 }
 
