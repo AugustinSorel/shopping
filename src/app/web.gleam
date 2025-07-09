@@ -18,7 +18,7 @@ pub fn auth_guard(
 ) -> wisp.Response {
   case ctx.session {
     option.Some(session) -> cb(session)
-    option.None -> wisp.redirect(to: "/auth/sign-up")
+    option.None -> wisp.redirect(to: "/sign-up")
   }
 }
 

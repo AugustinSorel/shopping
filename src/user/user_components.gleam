@@ -128,7 +128,7 @@ pub fn preference() {
               button.Ghost,
               button.Medium,
               [
-                attribute.attribute("hx-post", "/auth/sign-out"),
+                attribute.attribute("hx-post", "/sign-out"),
                 attribute.attribute("hx-target", "closest section"),
                 attribute.attribute("hx-swap", "outerHTML"),
                 attribute.attribute("hx-disabled-elt", "this"),

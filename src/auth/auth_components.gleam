@@ -38,7 +38,7 @@ pub fn sign_up_page(children: element.Element(msg)) {
     children,
     html.p([attribute.class("text-secondary text-sm text-center")], [
       html.text("already got an account? "),
-      html.a([attribute.href("/auth/sign-in")], [
+      html.a([attribute.href("/sign-in")], [
         html.span([attribute.class("text-primary hover:underline")], [
           html.text("sign-in"),
         ]),
@@ -53,7 +53,7 @@ pub fn sign_up_form(
 ) {
   html.form(
     [
-      attribute.attribute("hx-post", "/auth/sign-up"),
+      attribute.attribute("hx-post", "/sign-up"),
       attribute.attribute("hx-target", "this"),
       attribute.attribute("hx-swap", "outerHTML"),
       attribute.attribute("hx-disabled-elt", "find button[type='submit']"),
@@ -183,7 +183,7 @@ pub fn sign_in_page(children: element.Element(msg)) {
     children,
     html.p([attribute.class("text-secondary text-sm text-center")], [
       html.text("don't have an account? "),
-      html.a([attribute.href("/auth/sign-up")], [
+      html.a([attribute.href("/sign-up")], [
         html.span([attribute.class("text-primary hover:underline")], [
           html.text("sign-up"),
         ]),
@@ -198,7 +198,7 @@ pub fn sign_in_form(
 ) {
   html.form(
     [
-      attribute.attribute("hx-post", "/auth/sign-in"),
+      attribute.attribute("hx-post", "/sign-in"),
       attribute.attribute("hx-target", "this"),
       attribute.attribute("hx-swap", "outerHTML"),
       attribute.attribute("hx-disabled-elt", "find button[type='submit']"),

@@ -1,9 +1,9 @@
 import app/web
+import auth/auth_handler
 import gleam/http
 import gleam/option
 import gleam/result
 import product/product_handler
-import session/session_handler
 import session/session_service
 import user/user_handler
 import wisp
@@ -27,9 +27,9 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["products", "create"] -> products_create(req, ctx)
     ["products", product_id, "bought"] -> product_bought(req, ctx, product_id)
 
-    ["auth", "sign-up"] -> sign_up(req, ctx)
-    ["auth", "sign-in"] -> sign_in(req, ctx)
-    ["auth", "sign-out"] -> sign_out(req, ctx)
+    ["sign-up"] -> sign_up(req, ctx)
+    ["sign-in"] -> sign_in(req, ctx)
+    ["sign-out"] -> sign_out(req, ctx)
 
     ["users", "account"] -> users_account(req, ctx)
 
@@ -45,8 +45,8 @@ fn users_account(req: wisp.Request, ctx: web.Ctx) {
 
 fn sign_up(req: wisp.Request, ctx: web.Ctx) {
   case req.method {
-    http.Get -> session_handler.sign_up_page(req, ctx)
-    http.Post -> session_handler.sign_up(req, ctx)
+    http.Get -> auth_handler.sign_up_page(req, ctx)
+    http.Post -> auth_handler.sign_up(req, ctx)
 
     _ -> wisp.method_not_allowed([http.Get, http.Post])
   }
@@ -54,8 +54,8 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
 
 fn sign_in(req: wisp.Request, ctx: web.Ctx) {
   case req.method {
-    http.Get -> session_handler.sign_in_page(req, ctx)
-    http.Post -> session_handler.sign_in(req, ctx)
+    http.Get -> auth_handler.sign_in_page(req, ctx)
+    http.Post -> auth_handler.sign_in(req, ctx)
 
     _ -> wisp.method_not_allowed([http.Get, http.Post])
   }
@@ -64,7 +64,7 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 fn sign_out(req: wisp.Request, ctx: web.Ctx) {
   use <- wisp.require_method(req, http.Post)
 
-  session_handler.sign_out(req, ctx)
+  auth_handler.sign_out(req, ctx)
 }
 
 fn products_create(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
