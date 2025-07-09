@@ -2,6 +2,7 @@
 -- +goose StatementBegin
 create table products(
     id integer primary key generated always as identity,
+    user_id int not null references users(id) on delete cascade,
     title text not null,
     quantity int not null,
     location text,

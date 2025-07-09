@@ -40,7 +40,7 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
 }
 
 pub fn create(req: wisp.Request, ctx: web.Ctx) {
-  use _session <- web.auth_guard(ctx)
+  use session <- web.auth_guard(ctx)
 
   use formdata <- wisp.require_form(req)
 
@@ -76,6 +76,7 @@ pub fn create(req: wisp.Request, ctx: web.Ctx) {
       product.quantity,
       product.location,
       product.urgent,
+      session.user.id,
     ))
 
     Ok(product)

@@ -4,6 +4,7 @@ import gleam/time/timestamp
 pub type Product {
   Product(
     id: Int,
+    user_id: Int,
     title: String,
     quantity: Int,
     urgent: Bool,
