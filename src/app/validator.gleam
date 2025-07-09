@@ -42,7 +42,7 @@ pub fn string_required(
   }
 }
 
-pub fn pipe_str_to_int(
+pub fn int_coerce(
   first_validator first_validator: valid.Validator(String, String, err),
   second_validator second_validator: valid.Validator(String, Int, err),
 ) {
@@ -54,7 +54,7 @@ pub fn pipe_str_to_int(
   }
 }
 
-pub fn pipe_str_to_bool(
+pub fn bool_coerce(
   first_validator first_validator: valid.Validator(String, String, err),
   second_validator second_validator: valid.Validator(String, Bool, err),
 ) {

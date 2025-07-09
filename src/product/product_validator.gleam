@@ -30,7 +30,7 @@ pub fn quantity() {
   let error = fn(msg) { #(Quantity, msg) }
 
   validator.trim
-  |> validator.pipe_str_to_int(
+  |> validator.int_coerce(
     valid.string_is_int(error("quantity must of type int")),
   )
   |> valid.then(valid.int_min(1, error("quantity must be at least 1")))
@@ -42,7 +42,7 @@ pub fn urgent() {
   let error = fn(msg) { #(Urgent, msg) }
 
   validator.trim
-  |> validator.pipe_str_to_bool(
+  |> validator.bool_coerce(
     validator.string_is_bool(error("urgent must be of type bool")),
   )
   |> validator.default(False)
@@ -71,9 +71,7 @@ pub fn id() {
   let error = fn(msg) { #(Id, msg) }
 
   validator.trim
-  |> validator.pipe_str_to_int(
-    valid.string_is_int(error("id must of type int")),
-  )
+  |> validator.int_coerce(valid.string_is_int(error("id must of type int")))
   |> valid.then(valid.int_min(0, error("id must be at least 1")))
 }
 
