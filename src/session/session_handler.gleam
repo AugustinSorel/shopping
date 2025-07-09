@@ -292,7 +292,9 @@ pub fn sign_out(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
   case result {
     Ok(_) -> {
-      wisp.ok() |> session_service.delete_cookie(req)
+      wisp.ok()
+      |> wisp.set_header("hx-redirect", "/auth/sign-in")
+      |> session_service.delete_cookie(req)
     }
     Error(e) -> {
       let msg = case e {

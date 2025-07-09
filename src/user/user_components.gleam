@@ -66,7 +66,11 @@ pub fn account_page(
       [
         avatar(user.email),
         html.h2(
-          [attribute.class("text-2xl font-semibold first-letter:capitalize")],
+          [
+            attribute.class(
+              "text-2xl font-semibold first-letter:capitalize truncate",
+            ),
+          ],
           [html.text(user.email)],
         ),
       ],
