@@ -1,4 +1,5 @@
 import components/alert
+import components/avatar
 import components/button
 import components/checkbox
 import components/icon
@@ -324,7 +325,7 @@ fn item(product: product_model.Product) {
       ),
     ],
     [
-      user_components.avatar(product.title),
+      avatar.component(product.title),
       html.div([], [
         html.header([attribute.class("flex items-center gap-2")], [
           html.label(
