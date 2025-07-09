@@ -12,6 +12,7 @@ import lustre/attribute
 import lustre/element
 import lustre/element/html
 import product/product_model
+import product/product_repo
 import user/user_components
 
 pub type CreateProductInput {
@@ -416,4 +417,52 @@ pub fn item_fallback(msg msg: String) {
 
 fn generate_product_id(product_id: Int) {
   string.join(["product", int.to_string(product_id)], "-")
+}
+
+pub fn stats(stats: product_repo.ProductStats) {
+  html.section(
+    [attribute.class("bg-surface-container-lowest space-y-3 rounded-3xl p-6")],
+    [
+      html.h2(
+        [attribute.class("text-lg font-semibold first-letter:capitalize")],
+        [html.text("info:")],
+      ),
+      html.dl(
+        [
+          attribute.class(
+            "grid grid-cols-[1fr_auto] [&>dt]:first-letter:capitalize",
+          ),
+        ],
+        [
+          html.dt([], [html.text("your count")]),
+          html.dd([], [
+            html.data(
+              [attribute.data("your count", stats.user_count |> int.to_string)],
+              [html.text(stats.user_count |> int.to_string)],
+            ),
+          ]),
+          html.dt([], [html.text("total products")]),
+          html.dd([], [
+            html.data(
+              [
+                attribute.data(
+                  "total count",
+                  stats.total_count |> int.to_string,
+                ),
+              ],
+              [html.text(stats.total_count |> int.to_string)],
+            ),
+          ]),
+        ],
+      ),
+    ],
+  )
+}
+
+pub fn stats_fallback(msg: String) {
+  alert.alert(alert.Destructive, [], [
+    icon.circle_alert([]),
+    alert.title([], [html.text("Could not load stats")]),
+    alert.description([], [html.text(msg)]),
+  ])
 }

@@ -1,3 +1,4 @@
+import components/alert
 import components/button
 import components/icon
 import components/spinner
@@ -80,31 +81,6 @@ pub fn account_page(
   ])
 }
 
-pub fn fun_facts() {
-  html.section(
-    [attribute.class("bg-surface-container-lowest space-y-3 rounded-3xl p-6")],
-    [
-      html.h2(
-        [attribute.class("text-lg font-semibold first-letter:capitalize")],
-        [html.text("info:")],
-      ),
-      html.dl(
-        [
-          attribute.class(
-            "grid grid-cols-[1fr_auto] [&>dt]:first-letter:capitalize",
-          ),
-        ],
-        [
-          html.dt([], [html.text("products created by you")]),
-          html.dd([], [html.text("0")]),
-          html.dt([], [html.text("total products")]),
-          html.dd([], [html.text("0")]),
-        ],
-      ),
-    ],
-  )
-}
-
 pub fn preference() {
   html.section(
     [attribute.class("bg-surface-container-lowest space-y-3 rounded-3xl p-6")],
@@ -143,4 +119,12 @@ pub fn preference() {
       ),
     ],
   )
+}
+
+pub fn preference_fallback(msg: String) {
+  alert.alert(alert.Destructive, [], [
+    icon.circle_alert([]),
+    alert.title([], [html.text("Could not load preference")]),
+    alert.description([], [html.text(msg)]),
+  ])
 }

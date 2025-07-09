@@ -191,3 +191,36 @@ pub fn delete_bought_at(db: pog.Connection, product_id: Int) {
     }
   }
 }
+
+pub type ProductStats {
+  ProductStats(user_count: Int, total_count: Int)
+}
+
+pub fn get_stats(user_id: Int, db: pog.Connection) {
+  let query = {
+    "select
+  		 count(*) filter (where user_id = $1),
+  		 count(*)
+		from products"
+  }
+
+  let row_decoder = {
+    use user_count <- decode.field(0, decode.int)
+    use total_count <- decode.field(1, decode.int)
+
+    decode.success(ProductStats(user_count:, total_count:))
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.int(user_id))
+    |> pog.returning(row_decoder)
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, [fun_facts, ..])) -> {
+      Ok(fun_facts)
+    }
+    _ -> Error(error.Internal(msg: "fetching products stats failed"))
+  }
+}
