@@ -48,7 +48,15 @@ pub fn create(
 
 pub fn get_by_id(id: String, db: pog.Connection) {
   let query = {
-    "select sessions.id, sessions.last_verified_at, sessions.secret_hash, users.id, users.email from sessions inner join users on users.id = sessions.user_id where sessions.id = $1"
+    "select
+      sessions.id,
+      sessions.last_verified_at,
+      sessions.secret_hash,
+      users.id,
+      users.email
+    from sessions
+    inner join users on users.id = sessions.user_id
+    where sessions.id = $1"
   }
 
   let row_decoder = {
