@@ -32,31 +32,13 @@ pub fn decode_token(token: String) {
   }
 }
 
-pub fn is_session_expired(created_at: timestamp.Timestamp) {
+pub fn compare_max_age(to to: timestamp.Timestamp) {
   let now = timestamp.system_time()
-  let session_creation = created_at
-
-  let session_age = timestamp.difference(now, session_creation)
+  let age = timestamp.difference(now, to)
 
   let max_age = duration.hours(24)
 
-  case duration.compare(session_age, max_age) {
-    order.Gt -> True
-    _ -> False
-  }
-}
-
-pub fn should_refresh_session(last_verified_at: timestamp.Timestamp) {
-  let now = timestamp.system_time()
-  let session_last_verified_at = last_verified_at
-  let age = timestamp.difference(now, session_last_verified_at)
-
-  let max_age = duration.hours(24)
-
-  case duration.compare(max_age, age) {
-    order.Gt -> True
-    _ -> False
-  }
+  duration.compare(age, max_age)
 }
 
 pub fn set_cookie(res: wisp.Response, req: wisp.Request, token: String) {
@@ -88,18 +70,17 @@ pub fn get_cookie(req: wisp.Request) {
 pub fn validate(candidate_token: String, ctx: web.Ctx) {
   use decoded_token <- result.try(decode_token(candidate_token))
 
-  use session <- result.try(session_repo.get_by_id(
-    decoded_token.session_id,
-    ctx.db,
-  ))
+  let session = session_repo.get_by_id(decoded_token.session_id, ctx.db)
 
-  let session_expired = case is_session_expired(session.last_verified_at) {
-    True -> {
+  use session <- result.try(session)
+
+  let session_expired = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
       session_repo.delete(decoded_token.session_id, ctx.db)
       |> result.unwrap_error(error.SessionExpired)
       |> Error
     }
-    False -> Ok(Nil)
+    _ -> Ok(Nil)
   }
 
   use _ <- result.try(session_expired)
@@ -116,8 +97,8 @@ pub fn validate(candidate_token: String, ctx: web.Ctx) {
     return: Error(error.SessionSecretInvalid),
   )
 
-  let refresh_session = case should_refresh_session(session.last_verified_at) {
-    True -> {
+  let refresh_session = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
       session_repo.refresh_last_verified_at(session.id, ctx.db)
       |> result.replace(Nil)
     }
