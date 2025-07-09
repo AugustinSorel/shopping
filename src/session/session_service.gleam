@@ -65,7 +65,7 @@ pub fn set_cookie(res: wisp.Response, req: wisp.Request, token: String) {
     req,
     name: cookie_name,
     value: token,
-    security: wisp.Signed,
+    security: wisp.PlainText,
     max_age: 24 |> duration.hours |> duration.to_seconds |> float.round,
   )
 }
@@ -76,13 +76,13 @@ pub fn delete_cookie(res: wisp.Response, req: wisp.Request) {
     req,
     name: cookie_name,
     value: "",
-    security: wisp.Signed,
+    security: wisp.PlainText,
     max_age: 0,
   )
 }
 
 pub fn get_cookie(req: wisp.Request) {
-  wisp.get_cookie(req, cookie_name, wisp.Signed)
+  wisp.get_cookie(req, cookie_name, wisp.PlainText)
 }
 
 pub fn validate(candidate_token: String, ctx: web.Ctx) {

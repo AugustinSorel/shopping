@@ -243,9 +243,6 @@ pub fn by_purchased_status_page(children: element.Element(msg)) {
         [attribute.class("text-2xl font-semibold first-letter:capitalize")],
         [html.text("shopping")],
       ),
-      html.button([attribute.attribute("hx-post", "/auth/sign-up")], [
-        html.text("CREATE SESSION"),
-      ]),
     ]),
     children,
   ])
