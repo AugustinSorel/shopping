@@ -14,7 +14,6 @@ import lustre/element
 import lustre/element/html
 import product/product_model
 import product/product_repo
-import user/user_components
 
 pub type CreateProductInput {
   CreateProductInput(
