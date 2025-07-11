@@ -3,7 +3,7 @@ import app/router
 import app/web
 import gleam/erlang/process
 import gleam/option
-import gleam/otp/static_supervisor as supervisor
+import gleam/otp/static_supervisor
 import gleam/otp/supervision
 import mist
 import pog
@@ -44,10 +44,10 @@ pub fn main() {
   }
 
   let _supervisor =
-    supervisor.new(supervisor.OneForOne)
-    |> supervisor.add(db_supervisor)
-    |> supervisor.add(http_server_supervisor)
-    |> supervisor.start
+    static_supervisor.new(static_supervisor.OneForOne)
+    |> static_supervisor.add(db_supervisor)
+    |> static_supervisor.add(http_server_supervisor)
+    |> static_supervisor.start
 
   process.sleep_forever()
 }
