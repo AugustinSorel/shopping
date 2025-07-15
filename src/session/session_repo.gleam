@@ -42,7 +42,8 @@ pub fn create(
 
   case response {
     Ok(pog.Returned(_i, [session, ..])) -> Ok(session)
-    _ -> Error(error.Internal("creating session failed"))
+    Ok(pog.Returned(_i, [])) -> Error(error.SessionNotFound)
+    Error(_) -> Error(error.Internal(msg: "creating session failed"))
   }
 }
 
@@ -82,7 +83,8 @@ pub fn get_by_id(id: String, db: pog.Connection) {
 
   case response {
     Ok(pog.Returned(_i, [session, ..])) -> Ok(session)
-    _ -> Error(error.Internal("fetching session failed"))
+    Ok(pog.Returned(_i, [])) -> Error(error.SessionNotFound)
+    Error(_) -> Error(error.Internal(msg: "fetching session failed"))
   }
 }
 
@@ -98,7 +100,7 @@ pub fn delete(id: String, db: pog.Connection) {
 
   case response {
     Ok(pog.Returned(_i, _rows)) -> Ok(Nil)
-    _ -> Error(error.Internal("deleting session failed"))
+    Error(_) -> Error(error.Internal(msg: "deleting session failed"))
   }
 }
 
@@ -133,6 +135,7 @@ pub fn refresh_last_verified_at(id: String, db: pog.Connection) {
 
   case response {
     Ok(pog.Returned(_i, [session, ..])) -> Ok(session)
-    _ -> Error(error.Internal("refreshing session last verified at failed"))
+    Ok(pog.Returned(_i, [])) -> Error(error.SessionNotFound)
+    Error(_) -> Error(error.Internal(msg: "refreshing session failed"))
   }
 }

@@ -22,9 +22,11 @@ pub type AppError {
   SessionExpired
   SessionTokenValidation
   SessionSecretInvalid
+  SessionNotFound
   Unauthorized
   UserConflict
   UserNotFound
+  ProductNotFound
   InvalidCredentials
 }
 

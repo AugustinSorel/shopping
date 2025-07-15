@@ -33,8 +33,9 @@ pub fn create(email: String, password: String, db: pog.Connection) {
 
   case response {
     Ok(pog.Returned(_i, [user, ..])) -> Ok(user)
+    Ok(pog.Returned(_i, [])) -> Error(error.UserNotFound)
     Error(pog.ConstraintViolated(_, _, _)) -> Error(error.UserConflict)
-    _ -> Error(error.Internal("creating user failed"))
+    Error(_) -> Error(error.Internal("creating user failed"))
   }
 }
 
@@ -68,6 +69,6 @@ pub fn get_by_email(email: String, db: pog.Connection) {
   case response {
     Ok(pog.Returned(_i, [user, ..])) -> Ok(user)
     Ok(pog.Returned(_i, [])) -> Error(error.UserNotFound)
-    _ -> Error(error.Internal(msg: "fetching user by email failed"))
+    Error(_) -> Error(error.Internal(msg: "fetching user by email failed"))
   }
 }

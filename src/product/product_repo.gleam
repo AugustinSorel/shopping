@@ -39,9 +39,7 @@ pub fn get_all(db: pog.Connection) {
     |> pog.execute(db)
 
   case response {
-    Ok(pog.Returned(_rows, products)) -> {
-      Ok(products)
-    }
+    Ok(pog.Returned(_rows, products)) -> Ok(products)
     Error(_) -> Error(error.Internal(msg: "fetching all products failed"))
   }
 }
@@ -93,12 +91,8 @@ pub fn create(
     |> pog.execute(db)
 
   case response {
-    Ok(pog.Returned(_rows, products)) -> {
-      Ok(products)
-    }
-    Error(_) -> {
-      Error(error.Internal(msg: "creating products failed"))
-    }
+    Ok(pog.Returned(_rows, products)) -> Ok(products)
+    Error(_) -> Error(error.Internal(msg: "creating products failed"))
   }
 }
 
@@ -138,10 +132,9 @@ pub fn create_bought_at(db: pog.Connection, product_id: Int) {
     |> pog.execute(db)
 
   case response {
-    Ok(pog.Returned(_rows, [product, ..])) -> {
-      Ok(product)
-    }
-    _ -> {
+    Ok(pog.Returned(_rows, [product, ..])) -> Ok(product)
+    Ok(pog.Returned(_rows, [])) -> Error(error.ProductNotFound)
+    Error(_) -> {
       Error(error.Internal(msg: "creating bought at to product failed"))
     }
   }
@@ -183,10 +176,9 @@ pub fn delete_bought_at(db: pog.Connection, product_id: Int) {
     |> pog.execute(db)
 
   case response {
-    Ok(pog.Returned(_rows, [product, ..])) -> {
-      Ok(product)
-    }
-    _ -> {
+    Ok(pog.Returned(_rows, [product, ..])) -> Ok(product)
+    Ok(pog.Returned(_rows, [])) -> Error(error.ProductNotFound)
+    Error(_) -> {
       Error(error.Internal(msg: "deleting bought at to product failed"))
     }
   }
@@ -218,9 +210,8 @@ pub fn get_stats(user_id: Int, db: pog.Connection) {
     |> pog.execute(db)
 
   case response {
-    Ok(pog.Returned(_rows, [fun_facts, ..])) -> {
-      Ok(fun_facts)
-    }
-    _ -> Error(error.Internal(msg: "fetching products stats failed"))
+    Ok(pog.Returned(_rows, [stats, ..])) -> Ok(stats)
+    Ok(pog.Returned(_rows, [])) -> Error(error.ProductNotFound)
+    Error(_) -> Error(error.Internal(msg: "fetching products stats failed"))
   }
 }
