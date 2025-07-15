@@ -411,19 +411,11 @@ pub fn confirm_password(password: String) {
   }
 }
 
-pub type SignUpInput {
-  SignUpInput(
-    email: option.Option(String),
-    password: option.Option(String),
-    confirm_password: option.Option(String),
-  )
-}
-
 pub type SignUpOutput {
   SignUpOutput(email: String, password: String, confirm_password: String)
 }
 
-pub fn validate_sign_up(input: SignUpInput) {
+pub fn validate_sign_up(input: SignUpValues) {
   input
   |> valid.validate(fn(input) {
     use email <- valid.check(input.email, validate_email())
@@ -444,15 +436,11 @@ pub fn validate_sign_up(input: SignUpInput) {
   })
 }
 
-pub type SignInInput {
-  SignInInput(email: option.Option(String), password: option.Option(String))
-}
-
 pub type SignInOutput {
   SignInOutput(email: String, password: String)
 }
 
-pub fn validate_sign_in(input: SignInInput) {
+pub fn validate_sign_in(input: SignInValues) {
   input
   |> valid.validate(fn(input) {
     use email <- valid.check(input.email, validate_email())

@@ -781,15 +781,6 @@ pub fn validate_id() {
   |> valid.then(valid.int_min(0, error("id must be at least 1")))
 }
 
-pub type CreateInput {
-  CreateInput(
-    title: option.Option(String),
-    quantity: option.Option(String),
-    location: option.Option(String),
-    urgent: option.Option(String),
-  )
-}
-
 pub type CreateOutput {
   CreateOutput(
     title: String,
@@ -799,7 +790,7 @@ pub type CreateOutput {
   )
 }
 
-pub fn validate_create(input: CreateInput) {
+pub fn validate_create(input: CreateProductInput) {
   input
   |> valid.validate(fn(input) {
     use title <- valid.check(input.title, validate_title())

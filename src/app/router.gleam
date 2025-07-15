@@ -94,7 +94,7 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
       use formdata <- wisp.require_form(req)
 
       let input = {
-        auth.SignUpInput(
+        auth.SignUpValues(
           email: list.key_find(formdata.values, "email") |> option.from_result,
           password: list.key_find(formdata.values, "password")
             |> option.from_result,
@@ -125,14 +125,6 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
             )
           }
 
-          let input = {
-            auth.SignUpValues(
-              email: input.email,
-              password: input.password,
-              confirm_password: input.confirm_password,
-            )
-          }
-
           auth.sign_up_form(option.Some(input), option.Some(errors))
           |> element.to_document_string_tree
           |> wisp.html_response(wisp.unprocessable_entity().status)
@@ -150,14 +142,6 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
               email: option.None,
               password: option.None,
               confirm_password: option.None,
-            )
-          }
-
-          let input = {
-            auth.SignUpValues(
-              email: input.email,
-              password: input.password,
-              confirm_password: input.confirm_password,
             )
           }
 
@@ -189,7 +173,7 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
       use formdata <- wisp.require_form(req)
 
       let input = {
-        auth.SignInInput(
+        auth.SignInValues(
           email: list.key_find(formdata.values, "email") |> option.from_result,
           password: list.key_find(formdata.values, "password")
             |> option.from_result,
@@ -213,10 +197,6 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
             auth.SignInErrors(root: option.None, email:, password:)
           }
 
-          let input = {
-            auth.SignInValues(email: input.email, password: input.password)
-          }
-
           auth.sign_in_form(option.Some(input), option.Some(errors))
           |> element.to_document_string_tree
           |> wisp.html_response(wisp.unprocessable_entity().status)
@@ -236,10 +216,6 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
               email: option.None,
               password: option.None,
             )
-          }
-
-          let input = {
-            auth.SignInValues(email: input.email, password: input.password)
           }
 
           auth.sign_in_form(option.Some(input), option.Some(errors))
@@ -338,7 +314,7 @@ fn products(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
       use formdata <- wisp.require_form(req)
 
       let input = {
-        product.CreateInput(
+        product.CreateProductInput(
           title: list.key_find(formdata.values, "title") |> option.from_result,
           quantity: list.key_find(formdata.values, "quantity")
             |> option.from_result,
@@ -385,15 +361,6 @@ fn products(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
             )
           }
 
-          let input = {
-            product.CreateProductInput(
-              title: input.title,
-              quantity: input.quantity,
-              location: input.location,
-              urgent: input.urgent,
-            )
-          }
-
           product.create_form(option.Some(input), option.Some(errors))
           |> element.to_document_string_tree
           |> wisp.html_response(wisp.unprocessable_entity().status)
@@ -411,15 +378,6 @@ fn products(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
               quantity: option.None,
               location: option.None,
               urgent: option.None,
-            )
-          }
-
-          let input = {
-            product.CreateProductInput(
-              title: input.title,
-              quantity: input.quantity,
-              location: input.location,
-              urgent: input.urgent,
             )
           }
 
