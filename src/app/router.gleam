@@ -80,10 +80,10 @@ fn users_account(req: wisp.Request, ctx: web.Ctx) {
 }
 
 fn sign_up(req: wisp.Request, ctx: web.Ctx) {
-  use <- web.guest_only(ctx)
-
   case req.method {
     http.Get -> {
+      use <- web.guest_only(ctx)
+
       auth.sign_up_form(option.None, option.None)
       |> auth.sign_up_page()
       |> view.layout(req.path, ctx)
@@ -91,6 +91,8 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
       |> wisp.html_response(wisp.ok().status)
     }
     http.Post -> {
+      use <- web.guest_only(ctx)
+
       use formdata <- wisp.require_form(req)
 
       let input = {
