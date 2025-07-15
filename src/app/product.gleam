@@ -35,33 +35,9 @@ pub fn get_all(db: pog.Connection) {
     "select * from products as p order by p.urgent desc, p.updated_at desc"
   }
 
-  let row_decoder = {
-    use id <- decode.field(0, decode.int)
-    use user_id <- decode.field(1, decode.int)
-    use title <- decode.field(2, decode.string)
-    use quantity <- decode.field(3, decode.int)
-    use location <- decode.field(4, decode.optional(decode.string))
-    use urgent <- decode.field(5, decode.bool)
-    use bought_at <- decode.field(6, decode.optional(pog.timestamp_decoder()))
-    use created_at <- decode.field(7, pog.timestamp_decoder())
-    use updated_at <- decode.field(8, pog.timestamp_decoder())
-
-    decode.success(Product(
-      id:,
-      user_id:,
-      title:,
-      quantity:,
-      urgent:,
-      location:,
-      bought_at:,
-      created_at:,
-      updated_at:,
-    ))
-  }
-
   let response =
     pog.query(query)
-    |> pog.returning(row_decoder)
+    |> pog.returning(product_row_decoder())
     |> pog.execute(db)
 
   case response {
@@ -82,30 +58,6 @@ pub fn create(
     "insert into products (title,quantity,location,urgent,user_id) values ($1,$2,$3,$4,$5) returning *"
   }
 
-  let row_decoder = {
-    use id <- decode.field(0, decode.int)
-    use user_id <- decode.field(1, decode.int)
-    use title <- decode.field(2, decode.string)
-    use quantity <- decode.field(3, decode.int)
-    use location <- decode.field(4, decode.optional(decode.string))
-    use urgent <- decode.field(5, decode.bool)
-    use bought_at <- decode.field(6, decode.optional(pog.timestamp_decoder()))
-    use created_at <- decode.field(7, pog.timestamp_decoder())
-    use updated_at <- decode.field(8, pog.timestamp_decoder())
-
-    decode.success(Product(
-      id:,
-      user_id:,
-      title:,
-      quantity:,
-      location:,
-      urgent:,
-      bought_at:,
-      created_at:,
-      updated_at:,
-    ))
-  }
-
   let response =
     pog.query(query)
     |> pog.parameter(pog.text(title))
@@ -113,7 +65,7 @@ pub fn create(
     |> pog.parameter(pog.nullable(fn(e) { pog.text(e) }, location))
     |> pog.parameter(pog.bool(urgent))
     |> pog.parameter(pog.int(user_id))
-    |> pog.returning(row_decoder)
+    |> pog.returning(product_row_decoder())
     |> pog.execute(db)
 
   case response {
@@ -127,34 +79,10 @@ pub fn create_bought_at(db: pog.Connection, product_id: Int) {
     "update products set bought_at = now() where id = $1 returning *"
   }
 
-  let row_decoder = {
-    use id <- decode.field(0, decode.int)
-    use user_id <- decode.field(1, decode.int)
-    use title <- decode.field(2, decode.string)
-    use quantity <- decode.field(3, decode.int)
-    use location <- decode.field(4, decode.optional(decode.string))
-    use urgent <- decode.field(5, decode.bool)
-    use bought_at <- decode.field(6, decode.optional(pog.timestamp_decoder()))
-    use created_at <- decode.field(7, pog.timestamp_decoder())
-    use updated_at <- decode.field(8, pog.timestamp_decoder())
-
-    decode.success(Product(
-      id:,
-      user_id:,
-      title:,
-      quantity:,
-      location:,
-      urgent:,
-      bought_at:,
-      created_at:,
-      updated_at:,
-    ))
-  }
-
   let response =
     pog.query(query)
     |> pog.parameter(pog.int(product_id))
-    |> pog.returning(row_decoder)
+    |> pog.returning(product_row_decoder())
     |> pog.execute(db)
 
   case response {
@@ -171,34 +99,10 @@ pub fn delete_bought_at(db: pog.Connection, product_id: Int) {
     "update products set bought_at = null where id = $1 returning *"
   }
 
-  let row_decoder = {
-    use id <- decode.field(0, decode.int)
-    use user_id <- decode.field(1, decode.int)
-    use title <- decode.field(2, decode.string)
-    use quantity <- decode.field(3, decode.int)
-    use location <- decode.field(4, decode.optional(decode.string))
-    use urgent <- decode.field(5, decode.bool)
-    use bought_at <- decode.field(6, decode.optional(pog.timestamp_decoder()))
-    use created_at <- decode.field(7, pog.timestamp_decoder())
-    use updated_at <- decode.field(8, pog.timestamp_decoder())
-
-    decode.success(Product(
-      id:,
-      user_id:,
-      title:,
-      quantity:,
-      location:,
-      urgent:,
-      bought_at:,
-      created_at:,
-      updated_at:,
-    ))
-  }
-
   let response =
     pog.query(query)
     |> pog.parameter(pog.int(product_id))
-    |> pog.returning(row_decoder)
+    |> pog.returning(product_row_decoder())
     |> pog.execute(db)
 
   case response {
@@ -208,6 +112,30 @@ pub fn delete_bought_at(db: pog.Connection, product_id: Int) {
       Error(error.Internal(msg: "deleting bought at to product failed"))
     }
   }
+}
+
+fn product_row_decoder() {
+  use id <- decode.field(0, decode.int)
+  use user_id <- decode.field(1, decode.int)
+  use title <- decode.field(2, decode.string)
+  use quantity <- decode.field(3, decode.int)
+  use location <- decode.field(4, decode.optional(decode.string))
+  use urgent <- decode.field(5, decode.bool)
+  use bought_at <- decode.field(6, decode.optional(pog.timestamp_decoder()))
+  use created_at <- decode.field(7, pog.timestamp_decoder())
+  use updated_at <- decode.field(8, pog.timestamp_decoder())
+
+  decode.success(Product(
+    id:,
+    user_id:,
+    title:,
+    quantity:,
+    location:,
+    urgent:,
+    bought_at:,
+    created_at:,
+    updated_at:,
+  ))
 }
 
 pub type ProductStats {

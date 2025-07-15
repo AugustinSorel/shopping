@@ -143,30 +143,12 @@ pub fn create(
     "insert into sessions (id, secret_hash, user_id) VALUES ($1, $2, $3) returning *"
   }
 
-  let row_decoder = {
-    use id <- decode.field(0, decode.string)
-    use user_id <- decode.field(1, decode.int)
-    use secret_hash <- decode.field(2, decode.bit_array)
-    use last_verified_at <- decode.field(3, pog.timestamp_decoder())
-    use created_at <- decode.field(4, pog.timestamp_decoder())
-    use updated_at <- decode.field(5, pog.timestamp_decoder())
-
-    decode.success(Session(
-      id:,
-      user_id:,
-      secret_hash:,
-      last_verified_at:,
-      created_at:,
-      updated_at:,
-    ))
-  }
-
   let response =
     pog.query(query)
     |> pog.parameter(pog.text(id))
     |> pog.parameter(pog.bytea(secret_hash))
     |> pog.parameter(pog.int(user_id))
-    |> pog.returning(row_decoder)
+    |> pog.returning(session_row_decoder())
     |> pog.execute(db)
 
   case response {
@@ -189,25 +171,10 @@ pub fn get_by_id(id: String, db: pog.Connection) {
     where sessions.id = $1"
   }
 
-  let row_decoder = {
-    use session_id <- decode.field(0, decode.string)
-    use last_verified_at <- decode.field(1, pog.timestamp_decoder())
-    use secret_hash <- decode.field(2, decode.bit_array)
-    use user_id <- decode.field(3, decode.int)
-    use email <- decode.field(4, decode.string)
-
-    decode.success(web.CtxSession(
-      id: session_id,
-      last_verified_at:,
-      secret_hash:,
-      user: web.CtxUser(id: user_id, email:),
-    ))
-  }
-
   let response =
     pog.query(query)
     |> pog.parameter(pog.text(id))
-    |> pog.returning(row_decoder)
+    |> pog.returning(ctx_session_row_decoder())
     |> pog.execute(db)
 
   case response {
@@ -238,28 +205,10 @@ pub fn refresh_last_verified_at(id: String, db: pog.Connection) {
     "update sessions set last_verified_at = now() where id = $1 returning *"
   }
 
-  let row_decoder = {
-    use id <- decode.field(0, decode.string)
-    use user_id <- decode.field(1, decode.int)
-    use secret_hash <- decode.field(2, decode.bit_array)
-    use last_verified_at <- decode.field(3, pog.timestamp_decoder())
-    use created_at <- decode.field(4, pog.timestamp_decoder())
-    use updated_at <- decode.field(5, pog.timestamp_decoder())
-
-    decode.success(Session(
-      id:,
-      user_id:,
-      secret_hash:,
-      last_verified_at:,
-      created_at:,
-      updated_at:,
-    ))
-  }
-
   let response =
     pog.query(query)
     |> pog.parameter(pog.text(id))
-    |> pog.returning(row_decoder)
+    |> pog.returning(session_row_decoder())
     |> pog.execute(db)
 
   case response {
@@ -267,4 +216,37 @@ pub fn refresh_last_verified_at(id: String, db: pog.Connection) {
     Ok(pog.Returned(_i, [])) -> Error(error.SessionNotFound)
     Error(_) -> Error(error.Internal(msg: "refreshing session failed"))
   }
+}
+
+fn session_row_decoder() {
+  use id <- decode.field(0, decode.string)
+  use user_id <- decode.field(1, decode.int)
+  use secret_hash <- decode.field(2, decode.bit_array)
+  use last_verified_at <- decode.field(3, pog.timestamp_decoder())
+  use created_at <- decode.field(4, pog.timestamp_decoder())
+  use updated_at <- decode.field(5, pog.timestamp_decoder())
+
+  decode.success(Session(
+    id:,
+    user_id:,
+    secret_hash:,
+    last_verified_at:,
+    created_at:,
+    updated_at:,
+  ))
+}
+
+fn ctx_session_row_decoder() {
+  use session_id <- decode.field(0, decode.string)
+  use last_verified_at <- decode.field(1, pog.timestamp_decoder())
+  use secret_hash <- decode.field(2, decode.bit_array)
+  use user_id <- decode.field(3, decode.int)
+  use email <- decode.field(4, decode.string)
+
+  decode.success(web.CtxSession(
+    id: session_id,
+    last_verified_at:,
+    secret_hash:,
+    user: web.CtxUser(id: user_id, email:),
+  ))
 }
