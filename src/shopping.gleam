@@ -43,7 +43,7 @@ pub fn main() {
     })
   }
 
-  let _supervisor =
+  let assert Ok(_actor) =
     static_supervisor.new(static_supervisor.OneForOne)
     |> static_supervisor.add(db_supervisor)
     |> static_supervisor.add(http_server_supervisor)
