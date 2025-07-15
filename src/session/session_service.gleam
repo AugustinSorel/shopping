@@ -22,14 +22,14 @@ pub fn encode_token(session_id: String, secret: String) {
 }
 
 pub fn decode_token(token: String) {
-  let split = token |> string.split_once(on: separator)
+  let split =
+    token
+    |> string.split_once(on: separator)
+    |> result.replace_error(error.SessionTokenValidation)
 
-  case split {
-    Ok(#(session_id, session_secret)) -> {
-      Ok(session_model.DecodedToken(session_id:, session_secret:))
-    }
-    Error(_) -> Error(error.SessionTokenValidation)
-  }
+  use #(session_id, session_secret) <- result.try(split)
+
+  Ok(session_model.DecodedToken(session_id:, session_secret:))
 }
 
 pub fn compare_max_age(to to: timestamp.Timestamp) {
