@@ -1,8 +1,137 @@
 import app/error
+import app/web
+import gleam/bit_array
+import gleam/bool
+import gleam/crypto
 import gleam/dynamic/decode
+import gleam/float
+import gleam/order
+import gleam/result
+import gleam/string
+import gleam/time/duration
+import gleam/time/timestamp
 import pog
-import session/session_model
-import user/user_model
+import wisp
+
+pub type Session {
+  Session(
+    id: String,
+    user_id: Int,
+    secret_hash: BitArray,
+    last_verified_at: timestamp.Timestamp,
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
+  )
+}
+
+pub type DecodedToken {
+  DecodedToken(session_id: String, session_secret: String)
+}
+
+const separator = "."
+
+const cookie_name = "session_token"
+
+pub fn sha512_hash(secret: BitArray) {
+  crypto.hash(crypto.Sha512, secret)
+}
+
+pub fn sha512_compare(left: BitArray, right: BitArray) {
+  crypto.secure_compare(left, right)
+}
+
+pub fn encode_token(session_id: String, secret: String) {
+  [session_id, secret] |> string.join(with: separator)
+}
+
+fn decode_token(token: String) {
+  let split =
+    token
+    |> string.split_once(on: separator)
+    |> result.replace_error(error.SessionTokenValidation)
+
+  use #(session_id, session_secret) <- result.try(split)
+
+  Ok(DecodedToken(session_id:, session_secret:))
+}
+
+fn compare_max_age(to to: timestamp.Timestamp) {
+  let now = timestamp.system_time()
+  let age = timestamp.difference(now, to)
+
+  let max_age = duration.hours(24)
+
+  duration.compare(age, max_age)
+}
+
+pub fn set_cookie(res: wisp.Response, req: wisp.Request, token: String) {
+  wisp.set_cookie(
+    res,
+    req,
+    name: cookie_name,
+    value: token,
+    security: wisp.Signed,
+    max_age: 24 |> duration.hours |> duration.to_seconds |> float.round,
+  )
+}
+
+pub fn delete_cookie(res: wisp.Response, req: wisp.Request) {
+  wisp.set_cookie(
+    res,
+    req,
+    name: cookie_name,
+    value: "",
+    security: wisp.Signed,
+    max_age: 0,
+  )
+}
+
+pub fn get_cookie(req: wisp.Request) {
+  wisp.get_cookie(req, cookie_name, wisp.Signed)
+}
+
+pub fn validate(candidate_token: String, ctx: web.Ctx) {
+  use decoded_token <- result.try(decode_token(candidate_token))
+
+  let session = get_by_id(decoded_token.session_id, ctx.db)
+
+  use session <- result.try(session)
+
+  let session_expired = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
+      delete(decoded_token.session_id, ctx.db)
+      |> result.unwrap_error(error.SessionExpired)
+      |> Error
+    }
+    _ -> Ok(Nil)
+  }
+
+  use _ <- result.try(session_expired)
+
+  let valid_secret = {
+    decoded_token.session_secret
+    |> bit_array.from_string
+    |> sha512_hash
+    |> sha512_compare(session.secret_hash)
+  }
+
+  use <- bool.guard(
+    when: !valid_secret,
+    return: Error(error.SessionSecretInvalid),
+  )
+
+  let refresh_session = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
+      refresh_last_verified_at(session.id, ctx.db)
+      |> result.replace(Nil)
+    }
+    _ -> Ok(Nil)
+  }
+
+  use _ <- result.try(refresh_session)
+
+  Ok(session)
+}
 
 pub fn create(
   id id: String,
@@ -22,7 +151,7 @@ pub fn create(
     use created_at <- decode.field(4, pog.timestamp_decoder())
     use updated_at <- decode.field(5, pog.timestamp_decoder())
 
-    decode.success(session_model.Session(
+    decode.success(Session(
       id:,
       user_id:,
       secret_hash:,
@@ -67,11 +196,11 @@ pub fn get_by_id(id: String, db: pog.Connection) {
     use user_id <- decode.field(3, decode.int)
     use email <- decode.field(4, decode.string)
 
-    decode.success(session_model.SessionWithUser(
+    decode.success(web.CtxSession(
       id: session_id,
       last_verified_at:,
       secret_hash:,
-      user: user_model.CtxUser(id: user_id, email:),
+      user: web.CtxUser(id: user_id, email:),
     ))
   }
 
@@ -117,7 +246,7 @@ pub fn refresh_last_verified_at(id: String, db: pog.Connection) {
     use created_at <- decode.field(4, pog.timestamp_decoder())
     use updated_at <- decode.field(5, pog.timestamp_decoder())
 
-    decode.success(session_model.Session(
+    decode.success(Session(
       id:,
       user_id:,
       secret_hash:,
