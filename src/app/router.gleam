@@ -268,18 +268,14 @@ fn sign_out(req: wisp.Request, ctx: web.Ctx) {
 }
 
 fn products_create(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
+  use <- wisp.require_method(req, http.Get)
+
   use _session <- web.auth_guard(ctx)
 
-  case req.method {
-    http.Get -> {
-      product.create_page()
-      |> view.layout(req.path, ctx)
-      |> element.to_document_string_tree
-      |> wisp.html_response(wisp.ok().status)
-    }
-
-    _ -> wisp.method_not_allowed([http.Get])
-  }
+  product.create_page()
+  |> view.layout(req.path, ctx)
+  |> element.to_document_string_tree
+  |> wisp.html_response(wisp.ok().status)
 }
 
 fn products(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
