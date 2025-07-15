@@ -1,8 +1,5 @@
-import components/alert
-import components/button
-import components/icon
-import components/input
-import components/spinner
+import app/icon
+import app/view
 import gleam/option
 import lustre/attribute
 import lustre/element
@@ -64,7 +61,7 @@ pub fn sign_up_form(
         html.span([attribute.class("first-letter:capitalize")], [
           html.text("email:"),
         ]),
-        input.component([
+        view.input([
           attribute.placeholder("john@example.com"),
           attribute.type_("email"),
           attribute.name("email"),
@@ -89,7 +86,7 @@ pub fn sign_up_form(
         html.span([attribute.class("first-letter:capitalize")], [
           html.text("password:"),
         ]),
-        input.component([
+        view.input([
           attribute.placeholder("****"),
           attribute.type_("password"),
           attribute.name("password"),
@@ -114,7 +111,7 @@ pub fn sign_up_form(
         html.span([attribute.class("first-letter:capitalize")], [
           html.text("confirm password:"),
         ]),
-        input.component([
+        view.input([
           attribute.placeholder("****"),
           attribute.type_("password"),
           attribute.name("confirm_password"),
@@ -138,18 +135,16 @@ pub fn sign_up_form(
           _ -> element.none()
         },
       ]),
-      button.component(
-        button.Default,
-        button.Medium,
-        [attribute.type_("submit")],
-        [html.text("sign up"), spinner.component([], icon.Small)],
-      ),
+      view.button(view.Default, view.Medium, [attribute.type_("submit")], [
+        html.text("sign up"),
+        view.spinner([], icon.Small),
+      ]),
       case errors {
         option.Some(SignUpErrors(root: option.Some(e), ..)) -> {
-          alert.alert(alert.Destructive, [], [
+          view.alert(view.Destructive, [], [
             icon.circle_alert([]),
-            alert.title([], [html.text("something went wrong!")]),
-            alert.description([], [html.text(e)]),
+            view.alert_title([], [html.text("something went wrong!")]),
+            view.alert_description([], [html.text(e)]),
           ])
         }
         _ -> element.none()
@@ -209,7 +204,7 @@ pub fn sign_in_form(
         html.span([attribute.class("first-letter:capitalize")], [
           html.text("email:"),
         ]),
-        input.component([
+        view.input([
           attribute.placeholder("john@example.com"),
           attribute.type_("email"),
           attribute.name("email"),
@@ -234,7 +229,7 @@ pub fn sign_in_form(
         html.span([attribute.class("first-letter:capitalize")], [
           html.text("password:"),
         ]),
-        input.component([
+        view.input([
           attribute.placeholder("****"),
           attribute.type_("password"),
           attribute.name("password"),
@@ -255,18 +250,16 @@ pub fn sign_in_form(
           _ -> element.none()
         },
       ]),
-      button.component(
-        button.Default,
-        button.Medium,
-        [attribute.type_("submit")],
-        [html.text("sign in"), spinner.component([], icon.Small)],
-      ),
+      view.button(view.Default, view.Medium, [attribute.type_("submit")], [
+        html.text("sign in"),
+        view.spinner([], icon.Small),
+      ]),
       case errors {
         option.Some(SignInErrors(root: option.Some(e), ..)) -> {
-          alert.alert(alert.Destructive, [], [
+          view.alert(view.Destructive, [], [
             icon.circle_alert([]),
-            alert.title([], [html.text("something went wrong!")]),
-            alert.description([], [html.text(e)]),
+            view.alert_title([], [html.text("something went wrong!")]),
+            view.alert_description([], [html.text(e)]),
           ])
         }
         _ -> element.none()

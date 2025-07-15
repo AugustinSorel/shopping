@@ -1,6 +1,6 @@
 import app/error
+import app/view
 import app/web
-import components/layout
 import gleam/list
 import gleam/option
 import gleam/result
@@ -21,7 +21,7 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
     Ok(product_service.ProductsByStatus(purchased, unpurchased)) -> {
       product_components.by_purchased_status(purchased, unpurchased)
       |> product_components.by_purchased_status_page
-      |> layout.component(req.path, ctx)
+      |> view.layout(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.ok().status)
     }
@@ -32,7 +32,7 @@ pub fn by_purchased_status_page(req: wisp.Request, ctx: web.Ctx) {
       }
       |> product_components.by_purchase_status_fallback
       |> product_components.by_purchased_status_page
-      |> layout.component(req.path, ctx)
+      |> view.layout(req.path, ctx)
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)
     }
@@ -147,7 +147,7 @@ pub fn create_page(req: wisp.Request, ctx: web.Ctx) {
   use _session <- web.auth_guard(ctx)
 
   product_components.create_page()
-  |> layout.component(req.path, ctx)
+  |> view.layout(req.path, ctx)
   |> element.to_document_string_tree
   |> wisp.html_response(wisp.ok().status)
 }

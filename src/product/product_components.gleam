@@ -1,10 +1,5 @@
-import components/alert
-import components/avatar
-import components/button
-import components/checkbox
-import components/icon
-import components/input
-import components/spinner
+import app/icon
+import app/view
 import gleam/int
 import gleam/list
 import gleam/option
@@ -83,7 +78,7 @@ pub fn create_form(
         html.span([attribute.class("first-letter:capitalize")], [
           html.text("title:"),
         ]),
-        input.component([
+        view.input([
           attribute.placeholder("title"),
           attribute.type_("text"),
           attribute.name("title"),
@@ -120,7 +115,7 @@ pub fn create_form(
             html.span([attribute.class("first-letter:capitalize")], [
               html.text("quantity:"),
             ]),
-            input.component([
+            view.input([
               attribute.placeholder("quantity"),
               attribute.type_("number"),
               attribute.name("quantity"),
@@ -155,7 +150,7 @@ pub fn create_form(
             html.span([attribute.class("first-letter:capitalize")], [
               html.text("location:"),
             ]),
-            input.component([
+            view.input([
               attribute.placeholder("location"),
               attribute.type_("string"),
               attribute.name("location"),
@@ -190,7 +185,7 @@ pub fn create_form(
             html.span([attribute.class("first-letter:capitalize")], [
               html.text("urgent:"),
             ]),
-            checkbox.component([
+            view.checkbox([
               attribute.placeholder("urgent"),
               attribute.name("urgent"),
               attribute.id("urgent"),
@@ -217,18 +212,16 @@ pub fn create_form(
           ]),
         ],
       ),
-      button.component(
-        button.Default,
-        button.Medium,
-        [attribute.type_("submit")],
-        [html.text("create"), spinner.component([], icon.Small)],
-      ),
+      view.button(view.Default, view.Medium, [attribute.type_("submit")], [
+        html.text("create"),
+        view.spinner([], icon.Small),
+      ]),
       case errors {
         option.Some(CreateProductErrors(root: option.Some(e), ..)) -> {
-          alert.alert(alert.Destructive, [], [
+          view.alert(view.Destructive, [], [
             icon.circle_alert([]),
-            alert.title([], [html.text("something went wrong!")]),
-            alert.description([], [html.text(e)]),
+            view.alert_title([], [html.text("something went wrong!")]),
+            view.alert_description([], [html.text(e)]),
           ])
         }
         _ -> element.none()
@@ -299,18 +292,18 @@ pub fn by_purchase_status_fallback(msg msg: String) {
   html.main([attribute.class("mx-auto max-w-xl space-y-20")], [
     html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
       html.h2([], [html.text("to buy")]),
-      alert.alert(alert.Destructive, [], [
+      view.alert(view.Destructive, [], [
         icon.circle_alert([]),
-        alert.title([], [html.text("something went wrong!")]),
-        alert.description([], [html.text(msg)]),
+        view.alert_title([], [html.text("something went wrong!")]),
+        view.alert_description([], [html.text(msg)]),
       ]),
     ]),
     html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
       html.h2([], [html.text("bought")]),
-      alert.alert(alert.Destructive, [], [
+      view.alert(view.Destructive, [], [
         icon.circle_alert([]),
-        alert.title([], [html.text("something went wrong!")]),
-        alert.description([], [html.text(msg)]),
+        view.alert_title([], [html.text("something went wrong!")]),
+        view.alert_description([], [html.text(msg)]),
       ]),
     ]),
   ])
@@ -324,7 +317,7 @@ fn item(product: product_model.Product) {
       ),
     ],
     [
-      avatar.component(product.title),
+      view.avatar(product.title),
       html.div([], [
         html.header([attribute.class("flex items-center gap-2")], [
           html.label(
@@ -380,7 +373,7 @@ fn item(product: product_model.Product) {
           ],
         ),
       ]),
-      checkbox.component([
+      view.checkbox([
         attribute.id(generate_product_id(product.id)),
         attribute.checked(option.is_some(product.bought_at)),
         case product.bought_at {
@@ -407,10 +400,10 @@ fn item(product: product_model.Product) {
 
 pub fn item_fallback(msg msg: String) {
   html.li([], [
-    alert.alert(alert.Destructive, [], [
+    view.alert(view.Destructive, [], [
       icon.circle_alert([]),
-      alert.title([], [html.text("something went wrong!")]),
-      alert.description([], [html.text(msg)]),
+      view.alert_title([], [html.text("something went wrong!")]),
+      view.alert_description([], [html.text(msg)]),
     ]),
   ])
 }
@@ -460,9 +453,9 @@ pub fn stats(stats: product_repo.ProductStats) {
 }
 
 pub fn stats_fallback(msg: String) {
-  alert.alert(alert.Destructive, [], [
+  view.alert(view.Destructive, [], [
     icon.circle_alert([]),
-    alert.title([], [html.text("Could not load stats")]),
-    alert.description([], [html.text(msg)]),
+    view.alert_title([], [html.text("Could not load stats")]),
+    view.alert_description([], [html.text(msg)]),
   ])
 }

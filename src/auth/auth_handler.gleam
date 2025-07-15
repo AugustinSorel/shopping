@@ -1,11 +1,10 @@
 import app/error
+import app/icon
+import app/view
 import app/web
 import auth/auth_components
 import auth/auth_service
 import auth/auth_validator
-import components/alert
-import components/icon
-import components/layout
 import gleam/bit_array
 import gleam/bool
 import gleam/list
@@ -25,7 +24,7 @@ pub fn sign_up_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
   auth_components.sign_up_form(option.None, option.None)
   |> auth_components.sign_up_page()
-  |> layout.component(req.path, ctx)
+  |> view.layout(req.path, ctx)
   |> element.to_document_string_tree
   |> wisp.html_response(wisp.ok().status)
 }
@@ -274,7 +273,7 @@ pub fn sign_in_page(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
   auth_components.sign_in_form(option.None, option.None)
   |> auth_components.sign_in_page()
-  |> layout.component(req.path, ctx)
+  |> view.layout(req.path, ctx)
   |> element.to_document_string_tree
   |> wisp.html_response(wisp.ok().status)
 }
@@ -302,10 +301,10 @@ pub fn sign_out(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
         _ -> "something went wrong"
       }
 
-      alert.alert(alert.Destructive, [], [
+      view.alert(view.Destructive, [], [
         icon.circle_alert([]),
-        alert.title([], [html.text(msg)]),
-        alert.description([], [html.text("something went wrong!")]),
+        view.alert_title([], [html.text(msg)]),
+        view.alert_description([], [html.text("something went wrong!")]),
       ])
       |> element.to_document_string_tree
       |> wisp.html_response(wisp.internal_server_error().status)

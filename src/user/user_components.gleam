@@ -1,9 +1,5 @@
-import components/alert
-import components/avatar
-import components/button
-import components/icon
-import components/spinner
-import components/theme
+import app/icon
+import app/view
 import lustre/attribute
 import lustre/element
 import lustre/element/html
@@ -21,7 +17,7 @@ pub fn account_page(
         ),
       ],
       [
-        avatar.component(user.email),
+        view.avatar(user.email),
         html.h2(
           [
             attribute.class(
@@ -52,12 +48,12 @@ pub fn preference() {
         ],
         [
           html.dt([], [html.text("theme")]),
-          html.dd([], [theme.switcher()]),
+          html.dd([], [view.theme_switcher()]),
           html.dt([], [html.text("session")]),
           html.dd([], [
-            button.component(
-              button.Ghost,
-              button.Medium,
+            view.button(
+              view.Ghost,
+              view.Medium,
               [
                 attribute.attribute("hx-post", "/sign-out"),
                 attribute.attribute("hx-target", "closest section"),
@@ -67,7 +63,7 @@ pub fn preference() {
                   "text-error text-md hover:bg-error-container text-md",
                 ),
               ],
-              [html.text("sign out"), spinner.component([], icon.Small)],
+              [html.text("sign out"), view.spinner([], icon.Small)],
             ),
           ]),
         ],
@@ -77,9 +73,9 @@ pub fn preference() {
 }
 
 pub fn preference_fallback(msg: String) {
-  alert.alert(alert.Destructive, [], [
+  view.alert(view.Destructive, [], [
     icon.circle_alert([]),
-    alert.title([], [html.text("Could not load preference")]),
-    alert.description([], [html.text(msg)]),
+    view.alert_title([], [html.text("Could not load preference")]),
+    view.alert_description([], [html.text(msg)]),
   ])
 }
