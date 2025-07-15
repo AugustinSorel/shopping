@@ -31,12 +31,10 @@ pub fn main() {
 
   let ctx = web.Ctx(db:, env:, session: option.None)
 
-  let secret = wisp.random_string(64)
-
   let http_server_supervisor = {
     supervision.supervisor(fn() {
       router.handle_request(_, ctx)
-      |> wisp_mist.handler(secret)
+      |> wisp_mist.handler(env.server_secret)
       |> mist.new
       |> mist.port(8080)
       |> mist.start

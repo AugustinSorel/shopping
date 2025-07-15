@@ -8,6 +8,7 @@ pub type Env {
     db_host: String,
     db_name: String,
     db_port: Int,
+    server_secret: String,
   )
 }
 
@@ -19,6 +20,7 @@ pub fn load() {
   let assert Ok(db_host) = env.get_string("DB_HOST")
   let assert Ok(db_name) = env.get_string("DB_NAME")
   let assert Ok(db_port) = env.get_int("DB_PORT")
+  let assert Ok(server_secret) = env.get_string("SERVER_SECRET")
 
-  Env(db_user:, db_password:, db_host:, db_name:, db_port:)
+  Env(db_user:, db_password:, db_host:, db_name:, db_port:, server_secret:)
 }
