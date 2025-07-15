@@ -330,13 +330,13 @@ pub fn sign_up(user: SignUpOutput, ctx: web.Ctx) {
   Ok(token)
 }
 
-pub fn sign_in(user: SignInOutput, ctx: web.Ctx) {
-  let user = user.get_by_email(user.email, ctx.db)
+pub fn sign_in(candidate_user: SignInOutput, ctx: web.Ctx) {
+  let user = user.get_by_email(candidate_user.email, ctx.db)
 
   use user <- result.try(user)
 
   let password_valid = {
-    user.password
+    candidate_user.password
     |> bit_array.from_string
     |> hash_verify(user.password)
   }
