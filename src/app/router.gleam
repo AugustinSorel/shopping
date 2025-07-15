@@ -342,20 +342,14 @@ fn products(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
           wisp.created()
           |> wisp.set_header("hx-redirect", "/products")
         }
-        Error(error.ProductValidation(
-          title:,
-          quantity:,
-          location:,
-          urgent:,
-          ..,
-        )) -> {
+        Error(error.ProductValidation(..) as e) -> {
           let errors = {
             product.CreateProductErrors(
               root: option.None,
-              title:,
-              quantity:,
-              location:,
-              urgent:,
+              title: e.title,
+              quantity: e.quantity,
+              location: e.location,
+              urgent: e.urgent,
             )
           }
 
