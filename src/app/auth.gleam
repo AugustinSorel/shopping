@@ -1,25 +1,30 @@
+import antigone
+import app/error
 import app/icon
+import app/session
+import app/user
+import app/validator
 import app/view
+import app/web
+import gleam/bit_array
+import gleam/bool
 import gleam/option
+import gleam/order
+import gleam/result
+import gleam/string
 import lustre/attribute
 import lustre/element
 import lustre/element/html
+import pog
+import valid
+import wisp
 
-pub type SignUpValues {
-  SignUpValues(
-    email: option.Option(String),
-    password: option.Option(String),
-    confirm_password: option.Option(String),
-  )
+fn hash_secret(secret: BitArray) {
+  antigone.hash(antigone.hasher(), secret)
 }
 
-pub type SignUpErrors {
-  SignUpErrors(
-    root: option.Option(String),
-    email: option.Option(List(String)),
-    password: option.Option(List(String)),
-    confirm_password: option.Option(List(String)),
-  )
+fn hash_verify(left: BitArray, right: String) {
+  antigone.verify(left, right)
 }
 
 pub fn sign_up_page(children: element.Element(msg)) {
@@ -42,6 +47,23 @@ pub fn sign_up_page(children: element.Element(msg)) {
       ]),
     ]),
   ])
+}
+
+pub type SignUpValues {
+  SignUpValues(
+    email: option.Option(String),
+    password: option.Option(String),
+    confirm_password: option.Option(String),
+  )
+}
+
+pub type SignUpErrors {
+  SignUpErrors(
+    root: option.Option(String),
+    email: option.Option(List(String)),
+    password: option.Option(List(String)),
+    confirm_password: option.Option(List(String)),
+  )
 }
 
 pub fn sign_up_form(
@@ -266,4 +288,170 @@ pub fn sign_in_form(
       },
     ],
   )
+}
+
+pub fn sign_up(user: SignUpOutput, ctx: web.Ctx) {
+  let hashed_password = {
+    user.password |> bit_array.from_string |> hash_secret
+  }
+
+  let token = {
+    pog.transaction(ctx.db, fn(db) {
+      let user = user.create(user.email, hashed_password, db)
+
+      use user <- result.try(user)
+
+      let session_id = wisp.random_string(64)
+      let secret = wisp.random_string(64)
+      let secret_hash = {
+        secret |> bit_array.from_string |> session.sha512_hash
+      }
+
+      let token = session.encode_token(session_id, secret)
+
+      let session = session.create(session_id, secret_hash, user.id, db)
+
+      use _session <- result.try(session)
+
+      Ok(token)
+    })
+    |> result.map_error(fn(e) {
+      case e {
+        pog.TransactionQueryError(_) -> {
+          error.Internal(msg: "somehting went wrong")
+        }
+        pog.TransactionRolledBack(e) -> e
+      }
+    })
+  }
+
+  use token <- result.try(token)
+
+  Ok(token)
+}
+
+pub fn sign_in(user: SignInOutput, ctx: web.Ctx) {
+  let user = user.get_by_email(user.email, ctx.db)
+
+  use user <- result.try(user)
+
+  let password_valid = {
+    user.password
+    |> bit_array.from_string
+    |> hash_verify(user.password)
+  }
+
+  use <- bool.guard(
+    when: !password_valid,
+    return: Error(error.InvalidCredentials),
+  )
+
+  let session_id = wisp.random_string(64)
+  let secret = wisp.random_string(64)
+  let secret_hash = {
+    secret |> bit_array.from_string |> session.sha512_hash
+  }
+
+  let token = session.encode_token(session_id, secret)
+
+  let session = session.create(session_id, secret_hash, user.id, ctx.db)
+
+  use _session <- result.try(session)
+
+  Ok(token)
+}
+
+pub type Fields {
+  Email
+  Password
+  ConfirmPassword
+}
+
+fn validate_email() {
+  let error = fn(msg) { #(Email, msg) }
+
+  validator.trim
+  |> valid.then(valid.string_is_not_empty(error("email is required")))
+  |> valid.then(valid.string_is_email(error("email must be valid")))
+  |> valid.then(valid.string_min_length(
+    3,
+    error("email must be at least 3 characters"),
+  ))
+  |> valid.then(valid.string_max_length(
+    255,
+    error("email must be at most 255 characters"),
+  ))
+  |> validator.string_required(error("email is required"))
+}
+
+fn validate_password() {
+  let error = fn(msg) { #(Password, msg) }
+
+  validator.trim
+  |> valid.then(valid.string_is_not_empty(error("password is required")))
+  |> valid.then(valid.string_min_length(
+    3,
+    error("password must be at least 3 characters"),
+  ))
+  |> valid.then(valid.string_max_length(
+    255,
+    error("password must be at most 255 characters"),
+  ))
+  |> validator.string_required(error("password is required"))
+}
+
+fn confirm_password(password: String) {
+  fn(confirm_password: option.Option(String)) {
+    let confirm_password = option.unwrap(confirm_password, "")
+
+    case string.compare(password, confirm_password) {
+      order.Eq -> #(password, [])
+      _ -> #(password, [#(ConfirmPassword, "password don't match")])
+    }
+  }
+}
+
+pub type SignUpOutput {
+  SignUpOutput(email: String, password: String, confirm_password: String)
+}
+
+pub fn validate_sign_up(input: SignUpValues) {
+  input
+  |> valid.validate(fn(input) {
+    use email <- valid.check(input.email, validate_email())
+    use password <- valid.check(input.password, validate_password())
+    use confirm_password <- valid.check(
+      input.confirm_password,
+      confirm_password(password),
+    )
+
+    valid.ok(SignUpOutput(email:, password:, confirm_password:))
+  })
+  |> result.map_error(fn(errors) {
+    error.SignUpValidation(
+      email: error.messages_for(Email, errors),
+      password: error.messages_for(Password, errors),
+      confirm_password: error.messages_for(ConfirmPassword, errors),
+    )
+  })
+}
+
+pub type SignInOutput {
+  SignInOutput(email: String, password: String)
+}
+
+pub fn validate_sign_in(input: SignInValues) {
+  input
+  |> valid.validate(fn(input) {
+    use email <- valid.check(input.email, validate_email())
+    use password <- valid.check(input.password, validate_password())
+
+    valid.ok(SignInOutput(email:, password:))
+  })
+  |> result.map_error(fn(errors) {
+    error.SignInValidation(
+      email: error.messages_for(Email, errors),
+      password: error.messages_for(Password, errors),
+    )
+  })
 }

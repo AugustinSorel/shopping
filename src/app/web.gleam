@@ -1,20 +1,29 @@
 import app/env
 import gleam/option
+import gleam/time/timestamp
 import pog
-import session/session_model
 import wisp
 
-pub type Ctx {
-  Ctx(
-    db: pog.Connection,
-    env: env.Env,
-    session: option.Option(session_model.SessionWithUser),
+pub type CtxUser {
+  CtxUser(id: Int, email: String)
+}
+
+pub type CtxSession {
+  CtxSession(
+    id: String,
+    last_verified_at: timestamp.Timestamp,
+    secret_hash: BitArray,
+    user: CtxUser,
   )
+}
+
+pub type Ctx {
+  Ctx(db: pog.Connection, env: env.Env, session: option.Option(CtxSession))
 }
 
 pub fn auth_guard(
   ctx: Ctx,
-  cb: fn(session_model.SessionWithUser) -> wisp.Response,
+  cb: fn(CtxSession) -> wisp.Response,
 ) -> wisp.Response {
   case ctx.session {
     option.Some(session) -> cb(session)

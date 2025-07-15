@@ -1,14 +1,190 @@
+import app/error
 import app/icon
+import app/validator
 import app/view
+import app/web
+import gleam/dynamic/decode
 import gleam/int
 import gleam/list
 import gleam/option
+import gleam/result
 import gleam/string
+import gleam/time/timestamp
 import lustre/attribute
 import lustre/element
 import lustre/element/html
-import product/product_model
-import product/product_repo
+import pog
+import valid
+
+pub type Product {
+  Product(
+    id: Int,
+    user_id: Int,
+    title: String,
+    quantity: Int,
+    urgent: Bool,
+    location: option.Option(String),
+    bought_at: option.Option(timestamp.Timestamp),
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
+  )
+}
+
+fn get_all(db: pog.Connection) {
+  let query = {
+    "select * from products as p order by p.urgent desc, p.updated_at desc"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.returning(product_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, products)) -> Ok(products)
+    Error(_) -> Error(error.Internal(msg: "fetching all products failed"))
+  }
+}
+
+pub fn create(
+  db: pog.Connection,
+  title: String,
+  quantity: Int,
+  location: option.Option(String),
+  urgent: Bool,
+  user_id: Int,
+) {
+  let query = {
+    "insert into products (title,quantity,location,urgent,user_id) values ($1,$2,$3,$4,$5) returning *"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.text(title))
+    |> pog.parameter(pog.int(quantity))
+    |> pog.parameter(pog.nullable(fn(e) { pog.text(e) }, location))
+    |> pog.parameter(pog.bool(urgent))
+    |> pog.parameter(pog.int(user_id))
+    |> pog.returning(product_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, products)) -> Ok(products)
+    Error(_) -> Error(error.Internal(msg: "creating products failed"))
+  }
+}
+
+pub fn create_bought_at(db: pog.Connection, product_id: Int) {
+  let query = {
+    "update products set bought_at = now() where id = $1 returning *"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.int(product_id))
+    |> pog.returning(product_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, [product, ..])) -> Ok(product)
+    Ok(pog.Returned(_rows, [])) -> Error(error.ProductNotFound)
+    Error(_) -> {
+      Error(error.Internal(msg: "creating bought at to product failed"))
+    }
+  }
+}
+
+pub fn delete_bought_at(db: pog.Connection, product_id: Int) {
+  let query = {
+    "update products set bought_at = null where id = $1 returning *"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.int(product_id))
+    |> pog.returning(product_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, [product, ..])) -> Ok(product)
+    Ok(pog.Returned(_rows, [])) -> Error(error.ProductNotFound)
+    Error(_) -> {
+      Error(error.Internal(msg: "deleting bought at to product failed"))
+    }
+  }
+}
+
+fn product_row_decoder() {
+  use id <- decode.field(0, decode.int)
+  use user_id <- decode.field(1, decode.int)
+  use title <- decode.field(2, decode.string)
+  use quantity <- decode.field(3, decode.int)
+  use location <- decode.field(4, decode.optional(decode.string))
+  use urgent <- decode.field(5, decode.bool)
+  use bought_at <- decode.field(6, decode.optional(pog.timestamp_decoder()))
+  use created_at <- decode.field(7, pog.timestamp_decoder())
+  use updated_at <- decode.field(8, pog.timestamp_decoder())
+
+  decode.success(Product(
+    id:,
+    user_id:,
+    title:,
+    quantity:,
+    location:,
+    urgent:,
+    bought_at:,
+    created_at:,
+    updated_at:,
+  ))
+}
+
+pub type ProductStats {
+  ProductStats(user_count: Int, total_count: Int)
+}
+
+pub fn get_stats(user_id: Int, db: pog.Connection) {
+  let query = {
+    "select
+  		 count(*) filter (where user_id = $1),
+  		 count(*)
+		from products"
+  }
+
+  let row_decoder = {
+    use user_count <- decode.field(0, decode.int)
+    use total_count <- decode.field(1, decode.int)
+
+    decode.success(ProductStats(user_count:, total_count:))
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.int(user_id))
+    |> pog.returning(row_decoder)
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, [stats, ..])) -> Ok(stats)
+    Ok(pog.Returned(_rows, [])) -> Error(error.ProductNotFound)
+    Error(_) -> Error(error.Internal(msg: "fetching products stats failed"))
+  }
+}
+
+pub type ProductsByStatus {
+  ProductsByStatus(purchased: List(Product), unpurchased: List(Product))
+}
+
+pub fn get_by_purchase_status(ctx: web.Ctx) {
+  use products <- result.try(get_all(ctx.db))
+
+  let products_by_purchased_status = {
+    list.partition(products, fn(p) { option.is_some(p.bought_at) })
+  }
+
+  let #(purchased, unpurchased) = products_by_purchased_status
+
+  Ok(ProductsByStatus(purchased:, unpurchased:))
+}
 
 pub type CreateProductInput {
   CreateProductInput(
@@ -243,8 +419,8 @@ pub fn by_purchased_status_page(children: element.Element(msg)) {
 }
 
 pub fn by_purchased_status(
-  products_purchased: List(product_model.Product),
-  products_unpurchased: List(product_model.Product),
+  products_purchased: List(Product),
+  products_unpurchased: List(Product),
 ) {
   let unpurchased_length = products_unpurchased |> list.length |> int.to_string
   let purchased_length = products_purchased |> list.length |> int.to_string
@@ -309,7 +485,7 @@ pub fn by_purchase_status_fallback(msg msg: String) {
   ])
 }
 
-fn item(product: product_model.Product) {
+fn item(product: Product) {
   html.li(
     [
       attribute.class(
@@ -412,7 +588,7 @@ fn generate_product_id(product_id: Int) {
   string.join(["product", int.to_string(product_id)], "-")
 }
 
-pub fn stats(stats: product_repo.ProductStats) {
+pub fn stats(stats: ProductStats) {
   html.section(
     [attribute.class("bg-surface-container-lowest space-y-3 rounded-3xl p-6")],
     [
@@ -458,4 +634,125 @@ pub fn stats_fallback(msg: String) {
     view.alert_title([], [html.text("Could not load stats")]),
     view.alert_description([], [html.text(msg)]),
   ])
+}
+
+pub type Fields {
+  Title
+  Quantity
+  Location
+  Urgent
+  Id
+}
+
+fn validate_title() {
+  let error = fn(msg) { #(Title, msg) }
+
+  validator.trim
+  |> valid.then(valid.string_is_not_empty(error("title  is required")))
+  |> valid.then(valid.string_min_length(
+    3,
+    error("title  must be at least 3 characters"),
+  ))
+  |> valid.then(valid.string_max_length(
+    255,
+    error("title must be at most 255 characters"),
+  ))
+  |> validator.string_required(error("title is required"))
+}
+
+fn validate_quantity() {
+  let error = fn(msg) { #(Quantity, msg) }
+
+  validator.trim
+  |> validator.int_coerce(
+    valid.string_is_int(error("quantity must of type int")),
+  )
+  |> valid.then(valid.int_min(1, error("quantity must be at least 1")))
+  |> valid.then(valid.int_max(255, error("quantity must be at most 255")))
+  |> validator.default(1)
+}
+
+fn validate_urgent() {
+  let error = fn(msg) { #(Urgent, msg) }
+
+  validator.trim
+  |> validator.bool_coerce(
+    validator.string_is_bool(error("urgent must be of type bool")),
+  )
+  |> validator.default(False)
+}
+
+fn validate_location() {
+  let error = fn(msg) { #(Location, msg) }
+
+  validator.empty_str_as_none()
+  |> valid.then(
+    validator.trim
+    |> valid.then(valid.string_is_not_empty(error("location is required")))
+    |> valid.then(valid.string_min_length(
+      3,
+      error("location must be at least 3 characters"),
+    ))
+    |> valid.then(valid.string_max_length(
+      255,
+      error("location must be at most 255 characters"),
+    ))
+    |> valid.optional,
+  )
+}
+
+fn validate_id() {
+  let error = fn(msg) { #(Id, msg) }
+
+  validator.trim
+  |> validator.int_coerce(valid.string_is_int(error("id must of type int")))
+  |> valid.then(valid.int_min(0, error("id must be at least 1")))
+}
+
+pub type CreateOutput {
+  CreateOutput(
+    title: String,
+    quantity: Int,
+    location: option.Option(String),
+    urgent: Bool,
+  )
+}
+
+pub fn validate_create(input: CreateProductInput) {
+  input
+  |> valid.validate(fn(input) {
+    use title <- valid.check(input.title, validate_title())
+    use quantity <- valid.check(input.quantity, validate_quantity())
+    use location <- valid.check(input.location, validate_location())
+    use urgent <- valid.check(input.urgent, validate_urgent())
+
+    valid.ok(CreateOutput(title:, quantity:, location:, urgent:))
+  })
+  |> result.map_error(fn(errors) {
+    error.ProductValidation(
+      id: option.None,
+      title: error.messages_for(Title, errors),
+      quantity: error.messages_for(Quantity, errors),
+      location: error.messages_for(Location, errors),
+      urgent: error.messages_for(Urgent, errors),
+    )
+  })
+}
+
+pub fn validate_id_str(input: String) {
+  input
+  |> valid.validate(fn(input) {
+    use id <- valid.check(input, validate_id())
+
+    valid.ok(id)
+  })
+  |> result.map_error(fn(errors) {
+    error.ProductValidation(
+      id: error.messages_for(Id, errors),
+      title: option.None,
+      quantity: option.None,
+      location: option.None,
+      urgent: option.None,
+    )
+  })
 }
