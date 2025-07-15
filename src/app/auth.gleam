@@ -19,11 +19,11 @@ import pog
 import valid
 import wisp
 
-pub fn hash_secret(secret: BitArray) {
+fn hash_secret(secret: BitArray) {
   antigone.hash(antigone.hasher(), secret)
 }
 
-pub fn hash_verify(left: BitArray, right: String) {
+fn hash_verify(left: BitArray, right: String) {
   antigone.verify(left, right)
 }
 
@@ -367,7 +367,7 @@ pub type Fields {
   ConfirmPassword
 }
 
-pub fn validate_email() {
+fn validate_email() {
   let error = fn(msg) { #(Email, msg) }
 
   validator.trim
@@ -384,7 +384,7 @@ pub fn validate_email() {
   |> validator.string_required(error("email is required"))
 }
 
-pub fn validate_password() {
+fn validate_password() {
   let error = fn(msg) { #(Password, msg) }
 
   validator.trim
@@ -400,7 +400,7 @@ pub fn validate_password() {
   |> validator.string_required(error("password is required"))
 }
 
-pub fn confirm_password(password: String) {
+fn confirm_password(password: String) {
   fn(confirm_password: option.Option(String)) {
     let confirm_password = option.unwrap(confirm_password, "")
 

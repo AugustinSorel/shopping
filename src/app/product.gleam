@@ -30,7 +30,7 @@ pub type Product {
   )
 }
 
-pub fn get_all(db: pog.Connection) {
+fn get_all(db: pog.Connection) {
   let query = {
     "select * from products as p order by p.urgent desc, p.updated_at desc"
   }
@@ -644,7 +644,7 @@ pub type Fields {
   Id
 }
 
-pub fn validate_title() {
+fn validate_title() {
   let error = fn(msg) { #(Title, msg) }
 
   validator.trim
@@ -660,7 +660,7 @@ pub fn validate_title() {
   |> validator.string_required(error("title is required"))
 }
 
-pub fn validate_quantity() {
+fn validate_quantity() {
   let error = fn(msg) { #(Quantity, msg) }
 
   validator.trim
@@ -672,7 +672,7 @@ pub fn validate_quantity() {
   |> validator.default(1)
 }
 
-pub fn validate_urgent() {
+fn validate_urgent() {
   let error = fn(msg) { #(Urgent, msg) }
 
   validator.trim
@@ -682,7 +682,7 @@ pub fn validate_urgent() {
   |> validator.default(False)
 }
 
-pub fn validate_location() {
+fn validate_location() {
   let error = fn(msg) { #(Location, msg) }
 
   validator.empty_str_as_none()
@@ -701,7 +701,7 @@ pub fn validate_location() {
   )
 }
 
-pub fn validate_id() {
+fn validate_id() {
   let error = fn(msg) { #(Id, msg) }
 
   validator.trim

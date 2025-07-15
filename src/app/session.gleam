@@ -158,7 +158,7 @@ pub fn create(
   }
 }
 
-pub fn get_by_id(id: String, db: pog.Connection) {
+fn get_by_id(id: String, db: pog.Connection) {
   let query = {
     "select
       sessions.id,
@@ -200,7 +200,7 @@ pub fn delete(id: String, db: pog.Connection) {
   }
 }
 
-pub fn refresh_last_verified_at(id: String, db: pog.Connection) {
+fn refresh_last_verified_at(id: String, db: pog.Connection) {
   let query = {
     "update sessions set last_verified_at = now() where id = $1 returning *"
   }
