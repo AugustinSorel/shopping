@@ -4,7 +4,6 @@ import app/web
 import gleam/erlang/process
 import gleam/option
 import gleam/otp/static_supervisor
-import gleam/otp/supervision
 import mist
 import pog
 import wisp
@@ -32,13 +31,11 @@ pub fn main() {
   let ctx = web.Ctx(db:, env:, session: option.None)
 
   let http_server_supervisor = {
-    supervision.supervisor(fn() {
-      router.handle_request(_, ctx)
-      |> wisp_mist.handler(env.server_secret)
-      |> mist.new
-      |> mist.port(8080)
-      |> mist.start
-    })
+    router.handle_request(_, ctx)
+    |> wisp_mist.handler(env.server_secret)
+    |> mist.new
+    |> mist.port(8080)
+    |> mist.supervised
   }
 
   let assert Ok(_actor) =
