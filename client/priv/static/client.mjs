@@ -1877,6 +1877,10 @@ function split2(x, substring) {
     return map(_pipe$2, identity);
   }
 }
+function inspect2(term) {
+  let _pipe = inspect(term);
+  return identity(_pipe);
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/dynamic/decode.mjs
 var DecodeError = class extends CustomType {
@@ -2213,6 +2217,176 @@ function classify_dynamic(data2) {
     return type.charAt(0).toUpperCase() + type.slice(1);
   }
 }
+function inspect(v) {
+  return new Inspector().inspect(v);
+}
+function float_to_string(float2) {
+  const string6 = float2.toString().replace("+", "");
+  if (string6.indexOf(".") >= 0) {
+    return string6;
+  } else {
+    const index4 = string6.indexOf("e");
+    if (index4 >= 0) {
+      return string6.slice(0, index4) + ".0" + string6.slice(index4);
+    } else {
+      return string6 + ".0";
+    }
+  }
+}
+var Inspector = class {
+  #references = /* @__PURE__ */ new Set();
+  inspect(v) {
+    const t = typeof v;
+    if (v === true) return "True";
+    if (v === false) return "False";
+    if (v === null) return "//js(null)";
+    if (v === void 0) return "Nil";
+    if (t === "string") return this.#string(v);
+    if (t === "bigint" || Number.isInteger(v)) return v.toString();
+    if (t === "number") return float_to_string(v);
+    if (v instanceof UtfCodepoint) return this.#utfCodepoint(v);
+    if (v instanceof BitArray) return this.#bit_array(v);
+    if (v instanceof RegExp) return `//js(${v})`;
+    if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+    if (v instanceof globalThis.Error) return `//js(${v.toString()})`;
+    if (v instanceof Function) {
+      const args = [];
+      for (const i of Array(v.length).keys())
+        args.push(String.fromCharCode(i + 97));
+      return `//fn(${args.join(", ")}) { ... }`;
+    }
+    if (this.#references.size === this.#references.add(v).size) {
+      return "//js(circular reference)";
+    }
+    let printed;
+    if (Array.isArray(v)) {
+      printed = `#(${v.map((v2) => this.inspect(v2)).join(", ")})`;
+    } else if (v instanceof List) {
+      printed = this.#list(v);
+    } else if (v instanceof CustomType) {
+      printed = this.#customType(v);
+    } else if (v instanceof Dict) {
+      printed = this.#dict(v);
+    } else if (v instanceof Set) {
+      return `//js(Set(${[...v].map((v2) => this.inspect(v2)).join(", ")}))`;
+    } else {
+      printed = this.#object(v);
+    }
+    this.#references.delete(v);
+    return printed;
+  }
+  #object(v) {
+    const name2 = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+    const props = [];
+    for (const k of Object.keys(v)) {
+      props.push(`${this.inspect(k)}: ${this.inspect(v[k])}`);
+    }
+    const body = props.length ? " " + props.join(", ") + " " : "";
+    const head = name2 === "Object" ? "" : name2 + " ";
+    return `//js(${head}{${body}})`;
+  }
+  #dict(map4) {
+    let body = "dict.from_list([";
+    let first3 = true;
+    map4.forEach((value3, key) => {
+      if (!first3) body = body + ", ";
+      body = body + "#(" + this.inspect(key) + ", " + this.inspect(value3) + ")";
+      first3 = false;
+    });
+    return body + "])";
+  }
+  #customType(record) {
+    const props = Object.keys(record).map((label2) => {
+      const value3 = this.inspect(record[label2]);
+      return isNaN(parseInt(label2)) ? `${label2}: ${value3}` : value3;
+    }).join(", ");
+    return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+  }
+  #list(list4) {
+    if (list4 instanceof Empty) {
+      return "[]";
+    }
+    let char_out = 'charlist.from_string("';
+    let list_out = "[";
+    let current = list4;
+    while (current instanceof NonEmpty) {
+      let element3 = current.head;
+      current = current.tail;
+      if (list_out !== "[") {
+        list_out += ", ";
+      }
+      list_out += this.inspect(element3);
+      if (char_out) {
+        if (Number.isInteger(element3) && element3 >= 32 && element3 <= 126) {
+          char_out += String.fromCharCode(element3);
+        } else {
+          char_out = null;
+        }
+      }
+    }
+    if (char_out) {
+      return char_out + '")';
+    } else {
+      return list_out + "]";
+    }
+  }
+  #string(str) {
+    let new_str = '"';
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      switch (char) {
+        case "\n":
+          new_str += "\\n";
+          break;
+        case "\r":
+          new_str += "\\r";
+          break;
+        case "	":
+          new_str += "\\t";
+          break;
+        case "\f":
+          new_str += "\\f";
+          break;
+        case "\\":
+          new_str += "\\\\";
+          break;
+        case '"':
+          new_str += '\\"';
+          break;
+        default:
+          if (char < " " || char > "~" && char < "\xA0") {
+            new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
+          } else {
+            new_str += char;
+          }
+      }
+    }
+    new_str += '"';
+    return new_str;
+  }
+  #utfCodepoint(codepoint2) {
+    return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
+  }
+  #bit_array(bits) {
+    if (bits.bitSize === 0) {
+      return "<<>>";
+    }
+    let acc = "<<";
+    for (let i = 0; i < bits.byteSize - 1; i++) {
+      acc += bits.byteAt(i).toString();
+      acc += ", ";
+    }
+    if (bits.byteSize * 8 === bits.bitSize) {
+      acc += bits.byteAt(bits.byteSize - 1).toString();
+    } else {
+      const trailingBitsCount = bits.bitSize % 8;
+      acc += bits.byteAt(bits.byteSize - 1) >> 8 - trailingBitsCount;
+      acc += `:size(${trailingBitsCount})`;
+    }
+    acc += ">>";
+    return acc;
+  }
+};
 function index2(data2, key) {
   if (data2 instanceof Dict || data2 instanceof WeakMap || data2 instanceof Map) {
     const token2 = {};
@@ -5331,10 +5505,10 @@ var virtualiseAttribute = (attr) => {
 // build/dev/javascript/lustre/lustre/runtime/client/runtime.ffi.mjs
 var is_browser = () => !!document2();
 var Runtime = class {
-  constructor(root3, [model, effects], view3, update3) {
+  constructor(root3, [model, effects], view5, update3) {
     this.root = root3;
     this.#model = model;
-    this.#view = view3;
+    this.#view = view5;
     this.#update = update3;
     this.#reconciler = new Reconciler(this.root, (event4, path2, name2) => {
       const [events, result] = handle(this.#events, path2, name2, event4);
@@ -5516,15 +5690,15 @@ function new$7(options) {
 
 // build/dev/javascript/lustre/lustre/runtime/client/spa.ffi.mjs
 var Spa = class _Spa {
-  static start({ init: init3, update: update3, view: view3 }, selector, flags) {
+  static start({ init: init3, update: update3, view: view5 }, selector, flags) {
     if (!is_browser()) return new Error(new NotABrowser());
     const root3 = selector instanceof HTMLElement ? selector : document2().querySelector(selector);
     if (!root3) return new Error(new ElementNotFound(selector));
-    return new Ok(new _Spa(root3, init3(flags), update3, view3));
+    return new Ok(new _Spa(root3, init3(flags), update3, view5));
   }
   #runtime;
-  constructor(root3, [init3, effects], update3, view3) {
-    this.#runtime = new Runtime(root3, [init3, effects], view3, update3);
+  constructor(root3, [init3, effects], update3, view5) {
+    this.#runtime = new Runtime(root3, [init3, effects], view5, update3);
   }
   send(message3) {
     switch (message3.constructor) {
@@ -5551,11 +5725,11 @@ var start = Spa.start;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init3, update3, view3, config) {
+  constructor(init3, update3, view5, config) {
     super();
     this.init = init3;
     this.update = update3;
-    this.view = view3;
+    this.view = view5;
     this.config = config;
   }
 };
@@ -5567,8 +5741,8 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function application(init3, update3, view3) {
-  return new App(init3, update3, view3, new$7(empty_list));
+function application(init3, update3, view5) {
+  return new App(init3, update3, view5, new$7(empty_list));
 }
 function start3(app, selector, start_args) {
   return guard(
@@ -5583,104 +5757,6 @@ function start3(app, selector, start_args) {
 // build/dev/javascript/gleam_stdlib/gleam/pair.mjs
 function new$8(first3, second2) {
   return [first3, second2];
-}
-
-// build/dev/javascript/lustre/lustre/event.mjs
-function is_immediate_event(name2) {
-  if (name2 === "input") {
-    return true;
-  } else if (name2 === "change") {
-    return true;
-  } else if (name2 === "focus") {
-    return true;
-  } else if (name2 === "focusin") {
-    return true;
-  } else if (name2 === "focusout") {
-    return true;
-  } else if (name2 === "blur") {
-    return true;
-  } else if (name2 === "select") {
-    return true;
-  } else {
-    return false;
-  }
-}
-function on(name2, handler) {
-  return event(
-    name2,
-    map2(handler, (msg) => {
-      return new Handler(false, false, msg);
-    }),
-    empty_list,
-    never,
-    never,
-    is_immediate_event(name2),
-    0,
-    0
-  );
-}
-function prevent_default(event4) {
-  if (event4 instanceof Event2) {
-    let _record = event4;
-    return new Event2(
-      _record.kind,
-      _record.name,
-      _record.handler,
-      _record.include,
-      always,
-      _record.stop_propagation,
-      _record.immediate,
-      _record.debounce,
-      _record.throttle
-    );
-  } else {
-    return event4;
-  }
-}
-function formdata_decoder() {
-  let string_value_decoder = field(
-    0,
-    string2,
-    (key) => {
-      return field(
-        1,
-        one_of(
-          map2(string2, (var0) => {
-            return new Ok(var0);
-          }),
-          toList([success(new Error(void 0))])
-        ),
-        (value3) => {
-          let _pipe2 = value3;
-          let _pipe$12 = map3(
-            _pipe2,
-            (_capture) => {
-              return new$8(key, _capture);
-            }
-          );
-          return success(_pipe$12);
-        }
-      );
-    }
-  );
-  let _pipe = string_value_decoder;
-  let _pipe$1 = list2(_pipe);
-  return map2(_pipe$1, values2);
-}
-function on_submit(msg) {
-  let _pipe = on(
-    "submit",
-    subfield(
-      toList(["detail", "formData"]),
-      formdata_decoder(),
-      (formdata) => {
-        let _pipe2 = formdata;
-        let _pipe$1 = msg(_pipe2);
-        return success(_pipe$1);
-      }
-    )
-  );
-  return prevent_default(_pipe);
 }
 
 // build/dev/javascript/modem/modem.ffi.mjs
@@ -5785,6 +5861,104 @@ function init(handler) {
       );
     }
   );
+}
+
+// build/dev/javascript/lustre/lustre/event.mjs
+function is_immediate_event(name2) {
+  if (name2 === "input") {
+    return true;
+  } else if (name2 === "change") {
+    return true;
+  } else if (name2 === "focus") {
+    return true;
+  } else if (name2 === "focusin") {
+    return true;
+  } else if (name2 === "focusout") {
+    return true;
+  } else if (name2 === "blur") {
+    return true;
+  } else if (name2 === "select") {
+    return true;
+  } else {
+    return false;
+  }
+}
+function on(name2, handler) {
+  return event(
+    name2,
+    map2(handler, (msg) => {
+      return new Handler(false, false, msg);
+    }),
+    empty_list,
+    never,
+    never,
+    is_immediate_event(name2),
+    0,
+    0
+  );
+}
+function prevent_default(event4) {
+  if (event4 instanceof Event2) {
+    let _record = event4;
+    return new Event2(
+      _record.kind,
+      _record.name,
+      _record.handler,
+      _record.include,
+      always,
+      _record.stop_propagation,
+      _record.immediate,
+      _record.debounce,
+      _record.throttle
+    );
+  } else {
+    return event4;
+  }
+}
+function formdata_decoder() {
+  let string_value_decoder = field(
+    0,
+    string2,
+    (key) => {
+      return field(
+        1,
+        one_of(
+          map2(string2, (var0) => {
+            return new Ok(var0);
+          }),
+          toList([success(new Error(void 0))])
+        ),
+        (value3) => {
+          let _pipe2 = value3;
+          let _pipe$12 = map3(
+            _pipe2,
+            (_capture) => {
+              return new$8(key, _capture);
+            }
+          );
+          return success(_pipe$12);
+        }
+      );
+    }
+  );
+  let _pipe = string_value_decoder;
+  let _pipe$1 = list2(_pipe);
+  return map2(_pipe$1, values2);
+}
+function on_submit(msg) {
+  let _pipe = on(
+    "submit",
+    subfield(
+      toList(["detail", "formData"]),
+      formdata_decoder(),
+      (formdata) => {
+        let _pipe2 = formdata;
+        let _pipe$1 = msg(_pipe2);
+        return success(_pipe$1);
+      }
+    )
+  );
+  return prevent_default(_pipe);
 }
 
 // build/dev/javascript/glailwind_merge/tailwind_merge_bundle.mjs
@@ -8376,48 +8550,125 @@ function spinner2(attr, size2) {
   );
 }
 
-// build/dev/javascript/client/client.mjs
-var FILEPATH = "src/client.gleam";
-var SignUp = class extends CustomType {
-  constructor(form2) {
-    super();
-    this.form = form2;
-  }
-};
-var SignIn = class extends CustomType {
-};
-var Products = class extends CustomType {
-};
-var CreateProduct = class extends CustomType {
-};
-var Account = class extends CustomType {
-};
-var NotFound = class extends CustomType {
-  constructor(uri) {
-    super();
-    this.uri = uri;
-  }
-};
-var Model = class extends CustomType {
-  constructor(route, user2) {
-    super();
-    this.route = route;
-    this.user = user2;
-  }
-};
-var UserNavigatedTo = class extends CustomType {
-  constructor(route) {
-    super();
-    this.route = route;
-  }
-};
-var UserSubmittedSignUpForm = class extends CustomType {
-  constructor(form2) {
-    super();
-    this.form = form2;
-  }
-};
-var SignUpData = class extends CustomType {
+// build/dev/javascript/client/pages/sign_in.mjs
+function view2(form2, on_submit2) {
+  return main(
+    toList([class$("max-w-app mx-auto py-10 space-y-15")]),
+    toList([
+      h1(
+        toList([
+          class$(
+            "text-2xl font-semibold first-letter:capitalize text-center"
+          )
+        ]),
+        toList([text3("welcome back!")])
+      ),
+      form(
+        toList([
+          attribute2("hx-post", "/sign-up"),
+          attribute2("hx-target", "this"),
+          attribute2("hx-swap", "outerHTML"),
+          attribute2("hx-disabled-elt", "find button[type='submit']"),
+          class$("flex flex-col gap-5"),
+          on_submit(on_submit2)
+        ]),
+        toList([
+          label(
+            toList([class$("flex flex-col gap-1")]),
+            toList([
+              span(
+                toList([class$("first-letter:capitalize")]),
+                toList([text3("email:")])
+              ),
+              input2(
+                toList([
+                  placeholder("john@example.com"),
+                  type_("email"),
+                  name("email")
+                ])
+              ),
+              (() => {
+                let $ = field_state(form2, "email");
+                if ($ instanceof Ok) {
+                  return none2();
+                } else {
+                  let e = $[0];
+                  return p(
+                    toList([
+                      class$(
+                        "text-error text-sm first-letter:capitalize"
+                      )
+                    ]),
+                    toList([text3(e)])
+                  );
+                }
+              })()
+            ])
+          ),
+          label(
+            toList([class$("flex flex-col gap-1")]),
+            toList([
+              span(
+                toList([class$("first-letter:capitalize")]),
+                toList([text3("password:")])
+              ),
+              input2(
+                toList([
+                  placeholder("****"),
+                  type_("password"),
+                  name("password")
+                ])
+              ),
+              (() => {
+                let $ = field_state(form2, "password");
+                if ($ instanceof Ok) {
+                  return none2();
+                } else {
+                  let e = $[0];
+                  return p(
+                    toList([
+                      class$(
+                        "text-error text-sm first-letter:capitalize"
+                      )
+                    ]),
+                    toList([text3(e)])
+                  );
+                }
+              })()
+            ])
+          ),
+          button2(
+            new Default(),
+            new Medium(),
+            toList([type_("submit")]),
+            toList([
+              text3("sign up"),
+              spinner2(toList([]), new Small())
+            ])
+          )
+        ])
+      ),
+      p(
+        toList([class$("text-secondary text-sm text-center")]),
+        toList([
+          text3("don't have an account? "),
+          a(
+            toList([href("/sign-up")]),
+            toList([
+              span(
+                toList([class$("text-primary hover:underline")]),
+                toList([text3("sign-up")])
+              )
+            ])
+          )
+        ])
+      )
+    ])
+  );
+}
+
+// build/dev/javascript/client/pages/sign_up.mjs
+var FormData2 = class extends CustomType {
   constructor(email, password, confirm_password) {
     super();
     this.email = email;
@@ -8425,80 +8676,7 @@ var SignUpData = class extends CustomType {
     this.confirm_password = confirm_password;
   }
 };
-function uri_to_route(uri) {
-  let $ = path_segments(uri.path);
-  if ($ instanceof Empty) {
-    return new Products();
-  } else {
-    let $1 = $.tail;
-    if ($1 instanceof Empty) {
-      let $2 = $.head;
-      if ($2 === "sign-up") {
-        return new SignUp(new$());
-      } else if ($2 === "sign-in") {
-        return new SignIn();
-      } else if ($2 === "") {
-        return new Products();
-      } else if ($2 === "products") {
-        return new Products();
-      } else {
-        return new NotFound(uri);
-      }
-    } else {
-      let $2 = $1.tail;
-      if ($2 instanceof Empty) {
-        let $3 = $1.head;
-        if ($3 === "create") {
-          let $4 = $.head;
-          if ($4 === "products") {
-            return new CreateProduct();
-          } else {
-            return new NotFound(uri);
-          }
-        } else if ($3 === "account") {
-          let $4 = $.head;
-          if ($4 === "users") {
-            return new Account();
-          } else {
-            return new NotFound(uri);
-          }
-        } else {
-          return new NotFound(uri);
-        }
-      } else {
-        return new NotFound(uri);
-      }
-    }
-  }
-}
-function init2(_) {
-  let _block;
-  let $ = do_initial_uri();
-  if ($ instanceof Ok) {
-    let uri = $[0];
-    _block = uri_to_route(uri);
-  } else {
-    _block = new SignUp(new$());
-  }
-  let route = _block;
-  let model = new Model(route, new None());
-  let effect = init(
-    (uri) => {
-      let _pipe = uri;
-      let _pipe$1 = uri_to_route(_pipe);
-      return new UserNavigatedTo(_pipe$1);
-    }
-  );
-  return [model, effect];
-}
-function navigate_to(route) {
-  return from(
-    (dispatch) => {
-      return dispatch(new UserNavigatedTo(route));
-    }
-  );
-}
-function decode_sign_up_form(values3) {
+function decode_form(values3) {
   let _pipe = decoding(
     parameter(
       (email) => {
@@ -8506,7 +8684,7 @@ function decode_sign_up_form(values3) {
           (password) => {
             return parameter(
               (confirm_password) => {
-                return new SignUpData(email, password, confirm_password);
+                return new FormData2(email, password, confirm_password);
               }
             );
           }
@@ -8627,6 +8805,278 @@ function decode_sign_up_form(values3) {
   );
   return finish(_pipe$4);
 }
+function view3(form2, on_submit2) {
+  return main(
+    toList([class$("max-w-app mx-auto py-10 space-y-15")]),
+    toList([
+      h1(
+        toList([
+          class$(
+            "text-2xl font-semibold first-letter:capitalize text-center"
+          )
+        ]),
+        toList([text3("welcome")])
+      ),
+      form(
+        toList([
+          attribute2("hx-post", "/sign-up"),
+          attribute2("hx-target", "this"),
+          attribute2("hx-swap", "outerHTML"),
+          attribute2("hx-disabled-elt", "find button[type='submit']"),
+          class$("flex flex-col gap-5"),
+          on_submit(on_submit2)
+        ]),
+        toList([
+          label(
+            toList([class$("flex flex-col gap-1")]),
+            toList([
+              span(
+                toList([class$("first-letter:capitalize")]),
+                toList([text3("email:")])
+              ),
+              input2(
+                toList([
+                  placeholder("john@example.com"),
+                  type_("email"),
+                  name("email")
+                ])
+              ),
+              (() => {
+                let $ = field_state(form2, "email");
+                if ($ instanceof Ok) {
+                  return none2();
+                } else {
+                  let e = $[0];
+                  return p(
+                    toList([
+                      class$(
+                        "text-error text-sm first-letter:capitalize"
+                      )
+                    ]),
+                    toList([text3(e)])
+                  );
+                }
+              })()
+            ])
+          ),
+          label(
+            toList([class$("flex flex-col gap-1")]),
+            toList([
+              span(
+                toList([class$("first-letter:capitalize")]),
+                toList([text3("password:")])
+              ),
+              input2(
+                toList([
+                  placeholder("****"),
+                  type_("password"),
+                  name("password")
+                ])
+              ),
+              (() => {
+                let $ = field_state(form2, "password");
+                if ($ instanceof Ok) {
+                  return none2();
+                } else {
+                  let e = $[0];
+                  return p(
+                    toList([
+                      class$(
+                        "text-error text-sm first-letter:capitalize"
+                      )
+                    ]),
+                    toList([text3(e)])
+                  );
+                }
+              })()
+            ])
+          ),
+          label(
+            toList([class$("flex flex-col gap-1")]),
+            toList([
+              span(
+                toList([class$("first-letter:capitalize")]),
+                toList([text3("confirm password:")])
+              ),
+              input2(
+                toList([
+                  placeholder("****"),
+                  type_("password"),
+                  name("confirm_password")
+                ])
+              ),
+              (() => {
+                let $ = field_state(form2, "confirm_password");
+                if ($ instanceof Ok) {
+                  return none2();
+                } else {
+                  let e = $[0];
+                  return p(
+                    toList([
+                      class$(
+                        "text-error text-sm first-letter:capitalize"
+                      )
+                    ]),
+                    toList([text3(e)])
+                  );
+                }
+              })()
+            ])
+          ),
+          button2(
+            new Default(),
+            new Medium(),
+            toList([type_("submit")]),
+            toList([
+              text3("sign up"),
+              spinner2(toList([]), new Small())
+            ])
+          )
+        ])
+      ),
+      p(
+        toList([class$("text-secondary text-sm text-center")]),
+        toList([
+          text3("already got an account? "),
+          a(
+            toList([href("/sign-in")]),
+            toList([
+              span(
+                toList([class$("text-primary hover:underline")]),
+                toList([text3("sign-in")])
+              )
+            ])
+          )
+        ])
+      )
+    ])
+  );
+}
+
+// build/dev/javascript/client/client.mjs
+var FILEPATH = "src/client.gleam";
+var SignUp = class extends CustomType {
+  constructor(form2) {
+    super();
+    this.form = form2;
+  }
+};
+var SignIn = class extends CustomType {
+  constructor(form2) {
+    super();
+    this.form = form2;
+  }
+};
+var Products = class extends CustomType {
+};
+var CreateProduct = class extends CustomType {
+};
+var Account = class extends CustomType {
+};
+var NotFound = class extends CustomType {
+  constructor(uri) {
+    super();
+    this.uri = uri;
+  }
+};
+var Model = class extends CustomType {
+  constructor(route, user2) {
+    super();
+    this.route = route;
+    this.user = user2;
+  }
+};
+var UserNavigatedTo = class extends CustomType {
+  constructor(route) {
+    super();
+    this.route = route;
+  }
+};
+var UserSubmittedSignUpForm = class extends CustomType {
+  constructor(form2) {
+    super();
+    this.form = form2;
+  }
+};
+var UserSubmittedSignInForm = class extends CustomType {
+  constructor(form2) {
+    super();
+    this.form = form2;
+  }
+};
+function uri_to_route(uri) {
+  let $ = path_segments(uri.path);
+  if ($ instanceof Empty) {
+    return new Products();
+  } else {
+    let $1 = $.tail;
+    if ($1 instanceof Empty) {
+      let $2 = $.head;
+      if ($2 === "sign-up") {
+        return new SignUp(new$());
+      } else if ($2 === "sign-in") {
+        return new SignIn(new$());
+      } else if ($2 === "") {
+        return new Products();
+      } else if ($2 === "products") {
+        return new Products();
+      } else {
+        return new NotFound(uri);
+      }
+    } else {
+      let $2 = $1.tail;
+      if ($2 instanceof Empty) {
+        let $3 = $1.head;
+        if ($3 === "create") {
+          let $4 = $.head;
+          if ($4 === "products") {
+            return new CreateProduct();
+          } else {
+            return new NotFound(uri);
+          }
+        } else if ($3 === "account") {
+          let $4 = $.head;
+          if ($4 === "users") {
+            return new Account();
+          } else {
+            return new NotFound(uri);
+          }
+        } else {
+          return new NotFound(uri);
+        }
+      } else {
+        return new NotFound(uri);
+      }
+    }
+  }
+}
+function init2(_) {
+  let _block;
+  let $ = do_initial_uri();
+  if ($ instanceof Ok) {
+    let uri = $[0];
+    _block = uri_to_route(uri);
+  } else {
+    _block = new SignUp(new$());
+  }
+  let route = _block;
+  let model = new Model(route, new None());
+  let effect = init(
+    (uri) => {
+      let _pipe = uri;
+      let _pipe$1 = uri_to_route(_pipe);
+      return new UserNavigatedTo(_pipe$1);
+    }
+  );
+  return [model, effect];
+}
+function navigate_to(route) {
+  return from(
+    (dispatch) => {
+      return dispatch(new UserNavigatedTo(route));
+    }
+  );
+}
 function update2(model, msg) {
   if (msg instanceof UserNavigatedTo) {
     let route = msg.route;
@@ -8637,12 +9087,16 @@ function update2(model, msg) {
       })(),
       none()
     ];
-  } else {
+  } else if (msg instanceof UserSubmittedSignUpForm) {
     let form2 = msg.form;
-    let $ = decode_sign_up_form(form2);
+    let $ = decode_form(form2);
     if ($ instanceof Ok) {
       let form$1 = $[0];
-      echo(form$1, "src/client.gleam", 76);
+      echo(
+        "TODO, make a request to /sign-up" + inspect2(form$1),
+        "src/client.gleam",
+        75
+      );
       return [model, navigate_to(new Products())];
     } else {
       let form$1 = $[0];
@@ -8654,166 +9108,47 @@ function update2(model, msg) {
         none()
       ];
     }
+  } else {
+    let form2 = msg.form;
+    let $ = decode_form(form2);
+    if ($ instanceof Ok) {
+      let form$1 = $[0];
+      echo(
+        "TODO, make a request to /sign-in" + inspect2(form$1),
+        "src/client.gleam",
+        87
+      );
+      return [model, navigate_to(new Products())];
+    } else {
+      let form$1 = $[0];
+      return [
+        (() => {
+          let _record = model;
+          return new Model(new SignIn(form$1), _record.user);
+        })(),
+        none()
+      ];
+    }
   }
 }
-function view2(model) {
+function view4(model) {
   let $ = model.route;
   if ($ instanceof SignUp) {
     let form2 = $.form;
-    return main(
-      toList([class$("max-w-app mx-auto py-10 space-y-15")]),
-      toList([
-        h1(
-          toList([
-            class$(
-              "text-2xl font-semibold first-letter:capitalize text-center"
-            )
-          ]),
-          toList([text3("welcome")])
-        ),
-        form(
-          toList([
-            attribute2("hx-post", "/sign-up"),
-            attribute2("hx-target", "this"),
-            attribute2("hx-swap", "outerHTML"),
-            attribute2(
-              "hx-disabled-elt",
-              "find button[type='submit']"
-            ),
-            class$("flex flex-col gap-5"),
-            on_submit(
-              (var0) => {
-                return new UserSubmittedSignUpForm(var0);
-              }
-            )
-          ]),
-          toList([
-            label(
-              toList([class$("flex flex-col gap-1")]),
-              toList([
-                span(
-                  toList([class$("first-letter:capitalize")]),
-                  toList([text3("email:")])
-                ),
-                input2(
-                  toList([
-                    placeholder("john@example.com"),
-                    type_("email"),
-                    name("email")
-                  ])
-                ),
-                (() => {
-                  let $1 = field_state(form2, "email");
-                  if ($1 instanceof Ok) {
-                    return none2();
-                  } else {
-                    let e = $1[0];
-                    return p(
-                      toList([
-                        class$(
-                          "text-error text-sm first-letter:capitalize"
-                        )
-                      ]),
-                      toList([text3(e)])
-                    );
-                  }
-                })()
-              ])
-            ),
-            label(
-              toList([class$("flex flex-col gap-1")]),
-              toList([
-                span(
-                  toList([class$("first-letter:capitalize")]),
-                  toList([text3("password:")])
-                ),
-                input2(
-                  toList([
-                    placeholder("****"),
-                    type_("password"),
-                    name("password")
-                  ])
-                ),
-                (() => {
-                  let $1 = field_state(form2, "password");
-                  if ($1 instanceof Ok) {
-                    return none2();
-                  } else {
-                    let e = $1[0];
-                    return p(
-                      toList([
-                        class$(
-                          "text-error text-sm first-letter:capitalize"
-                        )
-                      ]),
-                      toList([text3(e)])
-                    );
-                  }
-                })()
-              ])
-            ),
-            label(
-              toList([class$("flex flex-col gap-1")]),
-              toList([
-                span(
-                  toList([class$("first-letter:capitalize")]),
-                  toList([text3("confirm password:")])
-                ),
-                input2(
-                  toList([
-                    placeholder("****"),
-                    type_("password"),
-                    name("confirm_password")
-                  ])
-                ),
-                (() => {
-                  let $1 = field_state(form2, "confirm_password");
-                  if ($1 instanceof Ok) {
-                    return none2();
-                  } else {
-                    let e = $1[0];
-                    return p(
-                      toList([
-                        class$(
-                          "text-error text-sm first-letter:capitalize"
-                        )
-                      ]),
-                      toList([text3(e)])
-                    );
-                  }
-                })()
-              ])
-            ),
-            button2(
-              new Default(),
-              new Medium(),
-              toList([type_("submit")]),
-              toList([
-                text3("sign up"),
-                spinner2(toList([]), new Small())
-              ])
-            )
-          ])
-        ),
-        p(
-          toList([class$("text-secondary text-sm text-center")]),
-          toList([
-            text3("already got an account? "),
-            a(
-              toList([href("/sign-in")]),
-              toList([
-                span(
-                  toList([class$("text-primary hover:underline")]),
-                  toList([text3("sign-in")])
-                )
-              ])
-            )
-          ])
-        )
-      ])
+    return view3(
+      form2,
+      (var0) => {
+        return new UserSubmittedSignUpForm(var0);
+      }
     );
   } else if ($ instanceof SignIn) {
-    return h1(toList([]), toList([text3("/sign-in")]));
+    let form2 = $.form;
+    return view2(
+      form2,
+      (var0) => {
+        return new UserSubmittedSignInForm(var0);
+      }
+    );
   } else if ($ instanceof Products) {
     return h1(toList([]), toList([text3("/products")]));
   } else if ($ instanceof CreateProduct) {
@@ -8825,17 +9160,17 @@ function view2(model) {
   }
 }
 function main2() {
-  let app = application(init2, update2, view2);
+  let app = application(init2, update2, view4);
   let $ = start3(app, "#app", void 0);
   if (!($ instanceof Ok)) {
     throw makeError(
       "let_assert",
       FILEPATH,
       "client",
-      16,
+      14,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 291, end: 340, pattern_start: 302, pattern_end: 307 }
+      { value: $, start: 263, end: 312, pattern_start: 274, pattern_end: 279 }
     );
   }
   return void 0;
