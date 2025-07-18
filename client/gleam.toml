@@ -1,4 +1,4 @@
-name = "shopping"
+name = "client"
 version = "1.0.0"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
@@ -14,19 +14,11 @@ version = "1.0.0"
 
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
-wisp = ">= 1.8.0 and < 2.0.0"
-mist = ">= 5.0.1 and < 6.0.0"
-gleam_http = ">= 4.0.0 and < 5.0.0"
-valid = ">= 5.0.0 and < 6.0.0"
 lustre = ">= 5.2.1 and < 6.0.0"
+modem = ">= 2.1.0 and < 3.0.0"
 glailwind_merge = ">= 1.1.0 and < 2.0.0"
-gleam_time = ">= 1.2.0 and < 2.0.0"
-dot_env = ">= 1.2.0 and < 2.0.0"
-gleam_crypto = ">= 1.5.1 and < 2.0.0"
-antigone = ">= 1.1.0 and < 2.0.0"
-gleam_erlang = ">= 1.2.0 and < 2.0.0"
-pog = ">= 4.0.0 and < 5.0.0"
-gleam_otp = ">= 1.0.0 and < 2.0.0"
+formal = ">= 2.2.0 and < 3.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
+lustre_dev_tools = ">= 1.9.0 and < 2.0.0"

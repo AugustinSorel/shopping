@@ -1,15 +1,14 @@
-import app/icon
-import app/web
 import glailwind_merge
 import gleam/bool
 import gleam/list
 import gleam/option
 import gleam/result
 import gleam/string
+import icon
 import lustre/attribute
 import lustre/element
 import lustre/element/html
-import styles/styles_utils
+import styles
 
 pub type Variant {
   Default
@@ -45,7 +44,7 @@ pub fn button(
     Medium -> "h-10 px-4 py-2 rounded-md"
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = {
     glailwind_merge.tw_merge([base_class, variant_class, size_class, attr_class])
@@ -70,7 +69,7 @@ pub fn alert(
     }
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = glailwind_merge.tw_merge([base_class, variant_class, attr_class])
 
@@ -99,7 +98,7 @@ pub fn checkbox(attr: List(attribute.Attribute(msg))) {
     "checked:bg-primary shrink-0 focus-visible:ring-on-surface before:bg-on-primary text-on-surface border-outline flex size-4 cursor-pointer appearance-none items-center justify-center rounded-sm border-2 before:hidden before:size-2.5 before:[clip-path:polygon(14%_44%,0_65%,50%_100%,100%_16%,80%_0%,43%_62%)] checked:border-none checked:before:block focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = glailwind_merge.tw_merge([base_class, attr_class])
 
@@ -111,7 +110,7 @@ pub fn input(attr: List(attribute.Attribute(msg))) {
     "ring-offset-background bg-surface-container-lowest focus-visible:ring-outline border-outline rounded-md border-2 px-5 py-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = glailwind_merge.tw_merge([base_class, attr_class])
 
@@ -121,7 +120,7 @@ pub fn input(attr: List(attribute.Attribute(msg))) {
 pub fn avatar(value: String) {
   let initial = string.first(value) |> result.unwrap("?")
 
-  let hue = styles_utils.hue_from_string(initial)
+  let hue = styles.hue_from_string(initial)
 
   html.span(
     [
@@ -144,8 +143,8 @@ pub fn avatar(value: String) {
   )
 }
 
-pub fn footer(current_path: String, ctx: web.Ctx) {
-  use <- bool.guard(when: option.is_none(ctx.session), return: element.none())
+pub fn footer(current_path: String, is_signed_in: option.Option(Nil)) {
+  use <- bool.guard(when: option.is_none(is_signed_in), return: element.none())
 
   html.footer(
     [
@@ -246,53 +245,9 @@ pub fn footer(current_path: String, ctx: web.Ctx) {
   )
 }
 
-pub fn layout(
-  children: element.Element(msg),
-  current_path: String,
-  ctx: web.Ctx,
-) {
-  html.html([attribute.lang("en")], [
-    html.head([], [
-      html.meta([attribute.charset("utf-8")]),
-      html.meta([
-        attribute.name("viewport"),
-        attribute.content("width=device-width, initial-scale=1"),
-      ]),
-      html.link([
-        attribute.href("/static/styles.css"),
-        attribute.rel("stylesheet"),
-      ]),
-      load_theme_script(),
-      html.script(
-        [
-          attribute.src(
-            "https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js",
-          ),
-        ],
-        "",
-      ),
-      html.script(
-        [attribute.src("https://unpkg.com/hyperscript.org@0.9.14")],
-        "",
-      ),
-      html.meta([
-        attribute.name("htmx-config"),
-        attribute.content(
-          "{\"responseHandling\": [{\"code\":\"...\", \"swap\": true}]}",
-        ),
-      ]),
-      html.title([], "shopping"),
-    ]),
-    html.body([attribute.class("bg-surface text-on-surface mb-24 p-4")], [
-      children,
-      footer(current_path, ctx),
-    ]),
-  ])
-}
-
 const theme_key = "theme"
 
-fn load_theme_script() {
+pub fn load_theme_script() {
   html.script([], "
     const cachedTheme = localStorage.getItem('" <> theme_key <> "');
 

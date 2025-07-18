@@ -33,8 +33,12 @@
                   watchexec --restart --verbose --wrap-process=session --stop-signal SIGTERM --exts gleam --debounce 500ms --watch src/ -- "gleam run"
                 '';
 
+                client-watch = pkgs.writeShellScriptBin "client_watch" ''
+                  gleam run -m lustre/dev start --detect-tailwind=false
+                '';
+
                 styles-watch = pkgs.writeShellScriptBin "styles_watch" ''
-                  tailwindcss -i ./src/styles/styles.css -o ./priv/static/styles.css --watch
+                  tailwindcss -i ./src/client.css -o ./priv/static/client.css --watch
                 '';
 
                 db-cli = pkgs.writeShellScriptBin "db_cli" ''
@@ -53,8 +57,10 @@
                     watchman
                     goose
                     watchexec
+                    inotify-tools
 
                     server-watch
+                    client-watch
                     styles-watch
                     db-cli
                   ];
