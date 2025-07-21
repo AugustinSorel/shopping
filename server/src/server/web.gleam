@@ -1,4 +1,3 @@
-import gleam/json
 import gleam/option
 import lustre/attribute
 import lustre/element
@@ -78,17 +77,7 @@ pub fn layout(
         option.Some(session) -> {
           html.script(
             [attribute.type_("application/json"), attribute.id("session")],
-            json.object([
-              #("id", json.string(session.id)),
-              #(
-                "user",
-                json.object([
-                  #("id", json.int(session.user.id)),
-                  #("email", json.string(session.user.email)),
-                ]),
-              ),
-            ])
-              |> json.to_string,
+            context.encode_session(session),
           )
         }
       },

@@ -21,7 +21,9 @@ import shared/context
 pub fn main() -> Nil {
   let hydration = get_hydration_data()
 
-  let session = hydration.session |> auth.decode_session() |> option.from_result
+  let session = {
+    hydration.session |> context.decode_session() |> option.from_result
+  }
 
   let app = lustre.application(init, update, view)
   let assert Ok(_) = lustre.start(app, "#app", Flags(session:))

@@ -2,7 +2,6 @@ import client/icon
 import client/network
 import client/view
 import formal/form
-import gleam/dynamic/decode
 import gleam/json
 import lustre/attribute
 import lustre/element
@@ -10,7 +9,6 @@ import lustre/element/html
 import lustre/event
 import rsvp
 import shared/auth
-import shared/context
 
 pub fn sign_in_post(body: auth.SignInInput, handle_response) {
   let body =
@@ -154,16 +152,6 @@ pub fn decode_sign_in_form(values: List(#(String, String))) {
       ),
   )
   |> form.finish
-}
-
-pub fn decode_session(json_session: String) {
-  json.parse(json_session, {
-    use id <- decode.field("id", decode.string)
-    use user_id <- decode.subfield(["user", "id"], decode.int)
-    use email <- decode.subfield(["user", "email"], decode.string)
-
-    decode.success(context.Session(id:, user: context.User(id: user_id, email:)))
-  })
 }
 
 pub fn sign_in_view(

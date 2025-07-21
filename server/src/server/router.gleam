@@ -13,6 +13,7 @@ import server/error
 import server/session
 import server/user
 import server/web
+import shared/context
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
@@ -160,9 +161,22 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
       let session = session.insert(session_id, secret_hash, user.id, ctx.db)
 
-      use _session <- web.require_ok(session)
+      use session <- web.require_ok(session)
 
-      wisp.ok()
+      let session =
+        context.Session(
+          id: session.id,
+          user: context.User(id: user.id, email: user.email),
+        )
+
+      client.Model(
+        route: client.SignIn(form: form.new(), state: network.Idle),
+        session: option.Some(session),
+      )
+      |> client.view()
+      |> web.layout(session: option.Some(session))
+      |> element.to_document_string_tree
+      |> wisp.html_response(200)
       |> session.set_cookie(req, token)
     }
 
