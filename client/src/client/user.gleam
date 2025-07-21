@@ -1,10 +1,12 @@
 import client/icon
+import client/theme
 import client/view
 import lustre/attribute
+import lustre/element
 import lustre/element/html
 import shared/context
 
-pub fn account_page(user: context.User) {
+pub fn account_page(children: List(element.Element(a)), user: context.User) {
   html.main([attribute.class("max-w-app mx-auto space-y-10")], [
     html.header(
       [
@@ -24,11 +26,11 @@ pub fn account_page(user: context.User) {
         ),
       ],
     ),
-    preference(),
+    ..children
   ])
 }
 
-pub fn preference() {
+pub fn preference(on_theme_change on_theme_change: fn(theme.Theme) -> a) {
   html.section(
     [attribute.class("bg-surface-container-lowest space-y-3 rounded-3xl p-6")],
     [
@@ -44,7 +46,7 @@ pub fn preference() {
         ],
         [
           html.dt([], [html.text("theme")]),
-          html.dd([], [view.theme_switcher()]),
+          html.dd([], [theme.theme_switcher(on_theme_change:)]),
           html.dt([], [html.text("session")]),
           html.dd([], [
             view.button(

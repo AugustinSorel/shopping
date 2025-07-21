@@ -216,7 +216,8 @@ fn user_account(req: wisp.Request, ctx: web.Ctx) {
 
   use session <- web.auth_guard(ctx)
 
-  client_user.account_page(session.user)
+  [client_user.preference(on_theme_change: client.UserChangedTheme)]
+  |> client_user.account_page(session.user)
   |> web.layout(session: option.Some(session))
   |> element.to_document_string_tree
   |> wisp.html_response(200)

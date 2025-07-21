@@ -2,6 +2,7 @@ import client/auth
 import client/network
 import client/product
 import client/route
+import client/theme
 import client/user
 import client/view
 import formal/form
@@ -50,13 +51,20 @@ fn init(flags: Flags) -> #(Model, effect.Effect(Msg)) {
   let model = Model(route:, session: flags.session)
 
   let effect =
-    modem.init(fn(uri) {
-      uri
-      |> route.from_uri
-      |> UserNavigatedTo
-    })
+    effect.batch([
+      modem.init(fn(uri) {
+        uri
+        |> route.from_uri
+        |> UserNavigatedTo
+      }),
+      sync_user_theme(),
+    ])
 
   #(model, effect)
+}
+
+fn sync_user_theme() {
+  effect.before_paint(fn(dispatch, _) { dispatch(UserThemeSynchronized) })
 }
 
 pub type Msg {
@@ -64,6 +72,8 @@ pub type Msg {
   UserSubmittedSignUpForm(form: List(#(String, String)))
   UserSubmittedSignInForm(form: List(#(String, String)))
   UserClickedSignOut
+  UserChangedTheme(theme: theme.Theme)
+  UserThemeSynchronized
   ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignIn(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignOut(Result(response.Response(String), rsvp.Error))
@@ -72,7 +82,12 @@ pub type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case model.route, msg {
     _, UserNavigatedTo(route:) -> {
-      #(Model(..model, route:), effect.none())
+      let effect = case route {
+        route.Account -> sync_user_theme()
+        _ -> effect.none()
+      }
+
+      #(Model(..model, route:), effect)
     }
     route.SignUp(..) as sign_up, UserSubmittedSignUpForm(form:) -> {
       case auth.decode_sign_up_form(form) {
@@ -162,6 +177,36 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         navigate(to: route.SignUp(form: form.new(), state: network.Idle)),
       )
     }
+    _, UserChangedTheme(theme) -> {
+      let assert Ok(root) = document.query_selector("html")
+
+      case theme {
+        theme.Dark | theme.Light -> {
+          let _ = theme.save_to_local_storage(theme)
+
+          let theme = theme.to_string(theme)
+
+          browser_element.set_attribute(root, "data-theme", theme)
+        }
+        theme.Auto -> {
+          let _ = theme.clear_local_storage()
+
+          browser_element.set_attribute(root, "data-theme", "")
+        }
+      }
+
+      #(model, effect.none())
+    }
+    _, UserThemeSynchronized -> {
+      let theme = theme.get_from_local_storage()
+
+      let _ =
+        { "input[value='" <> theme.to_string(theme) <> "']" }
+        |> document.query_selector()
+        |> result.map(browser_element.set_attribute(_, "checked", "true"))
+
+      #(model, effect.none())
+    }
     _, ApiReturnedSignOut(Error(_)) -> {
       #(model, effect.none())
     }
@@ -188,7 +233,13 @@ pub fn view(model: Model) -> element.Element(Msg) {
       auth.sign_up_view(form:, state:, on_submit: UserSubmittedSignUpForm)
     }
     route.Account as route, option.Some(session) -> {
-      element.fragment([user.account_page(session.user), view.footer(route:)])
+      element.fragment([
+        user.account_page(
+          [user.preference(on_theme_change: UserChangedTheme)],
+          session.user,
+        ),
+        view.footer(route:),
+      ])
     }
     route.CreateProduct, option.Some(..) -> {
       html.h1([], [html.text("/products/create")])
@@ -229,3 +280,4 @@ fn hydration_payload() {
 
   Hydration(session:)
 }
+//BUG: navigation not changing the url

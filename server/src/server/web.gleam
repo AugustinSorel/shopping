@@ -1,3 +1,4 @@
+import client/theme
 import gleam/option
 import lustre/attribute
 import lustre/element
@@ -72,6 +73,7 @@ pub fn layout(
         [attribute.src("/static/client.mjs"), attribute.type_("module")],
         "",
       ),
+      theme.load_theme_script(),
       case session {
         option.None -> element.none()
         option.Some(session) -> {
