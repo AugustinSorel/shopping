@@ -1,10 +1,10 @@
+import app/styles
 import glailwind_merge
 import gleam/list
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/element/svg
-import styles
 
 pub type Size {
   Small

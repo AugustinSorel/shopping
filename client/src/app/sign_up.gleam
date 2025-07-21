@@ -1,31 +1,33 @@
+import app/icon
+import app/network
+import app/view
 import formal/form
 import gleam/json
-import icon
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/event
-import network
 import rsvp
 import shared/auth
-import view
 
-pub fn sign_in(body: auth.SignInInput, handle_response) {
+pub fn sign_up(body: auth.SignUpInput, handle_response) {
   let body =
     json.object([
       #("email", json.string(body.email)),
       #("password", json.string(body.password)),
+      #("confirm_password", json.string(body.confirm_password)),
     ])
 
-  rsvp.post("/sign-in", body, rsvp.expect_ok_response(handle_response))
+  rsvp.post("/sign-up", body, rsvp.expect_ok_response(handle_response))
 }
 
 pub fn decode_form(values: List(#(String, String))) {
   form.decoding({
     use email <- form.parameter
     use password <- form.parameter
+    use confirm_password <- form.parameter
 
-    auth.SignInInput(email:, password:)
+    auth.SignUpInput(email:, password:, confirm_password:)
   })
   |> form.with_values(values)
   |> form.field(
@@ -64,6 +66,26 @@ pub fn decode_form(values: List(#(String, String))) {
         |> form.message("password must be at most 255 characters"),
       ),
   )
+  |> form.field(
+    "confirm_password",
+    form.string
+      |> form.and(
+        form.must_not_be_empty
+        |> form.message("confirm password cannot be blank"),
+      )
+      |> form.and(
+        form.must_be_string_longer_than(3)
+        |> form.message("confirm password must be at least 3 characters"),
+      )
+      |> form.and(
+        form.must_be_string_shorter_than(255)
+        |> form.message("confirm password must be at most 255 characters"),
+      )
+      |> form.and(form.must_equal(
+        form.value(form.initial_values(values), "password"),
+        because: "password and confirm password don't match",
+      )),
+  )
   |> form.finish
 }
 
@@ -79,7 +101,7 @@ pub fn view(
           "text-2xl font-semibold first-letter:capitalize text-center",
         ),
       ],
-      [html.text("welcome back!")],
+      [html.text("welcome")],
     ),
     html.form(
       [
@@ -129,6 +151,25 @@ pub fn view(
             }
           },
         ]),
+        html.label([attribute.class("flex flex-col gap-1")], [
+          html.span([attribute.class("first-letter:capitalize")], [
+            html.text("confirm password:"),
+          ]),
+          view.input([
+            attribute.placeholder("****"),
+            attribute.type_("password"),
+            attribute.name("confirm_password"),
+          ]),
+          case form.field_state(form, "confirm_password") {
+            Ok(_) -> element.none()
+            Error(e) -> {
+              html.p(
+                [attribute.class("text-error text-sm first-letter:capitalize")],
+                [html.text(e)],
+              )
+            }
+          },
+        ]),
         case state {
           network.Err(msg:) -> {
             view.alert(view.Destructive, [], [
@@ -150,7 +191,7 @@ pub fn view(
             }),
           ],
           [
-            html.text("sign in"),
+            html.text("sign up"),
             case state {
               network.Loading -> view.spinner([], icon.Small)
               _ -> element.none()
@@ -160,10 +201,10 @@ pub fn view(
       ],
     ),
     html.p([attribute.class("text-secondary text-sm text-center")], [
-      html.text("don't have an account? "),
-      html.a([attribute.href("/sign-up")], [
+      html.text("already got an account? "),
+      html.a([attribute.href("/sign-in")], [
         html.span([attribute.class("text-primary hover:underline")], [
-          html.text("sign-up"),
+          html.text("sign-in"),
         ]),
       ]),
     ]),

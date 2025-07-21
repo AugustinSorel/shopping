@@ -1,14 +1,14 @@
+import app/icon
+import app/styles
 import glailwind_merge
 import gleam/bool
 import gleam/list
 import gleam/option
 import gleam/result
 import gleam/string
-import icon
 import lustre/attribute
 import lustre/element
 import lustre/element/html
-import styles
 
 pub type Variant {
   Default

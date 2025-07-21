@@ -1,3 +1,6 @@
+import app/network
+import app/sign_in
+import app/sign_up
 import formal/form
 import gleam/http/response
 import gleam/option
@@ -6,9 +9,6 @@ import lustre
 import lustre/effect
 import lustre/element/html
 import modem
-import network
-import pages/sign_in
-import pages/sign_up
 import rsvp
 import shared/auth
 import shared/session
