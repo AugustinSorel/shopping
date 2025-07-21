@@ -3,7 +3,6 @@ import client/styles
 import glailwind_merge
 import gleam/bool
 import gleam/list
-import gleam/option
 import gleam/result
 import gleam/string
 import lustre/attribute
@@ -143,9 +142,7 @@ pub fn avatar(value: String) {
   )
 }
 
-pub fn footer(current_path: String, session: option.Option(a)) {
-  use <- bool.guard(when: option.is_none(session), return: element.none())
-
+pub fn footer(current_path: String) {
   html.footer(
     [
       attribute.class(

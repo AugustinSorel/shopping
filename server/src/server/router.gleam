@@ -13,7 +13,6 @@ import server/error
 import server/session
 import server/user
 import server/web
-import shared/context
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
@@ -43,12 +42,9 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(
-        route: client.SignUp(form: form.new(), state: network.Idle),
-        session: option.None,
-      )
+      client.Model(route: client.SignUp(form: form.new(), state: network.Idle))
       |> client.view()
-      |> web.layout(session: option.None)
+      |> web.layout()
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -109,12 +105,9 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(
-        route: client.SignIn(form: form.new(), state: network.Idle),
-        session: option.None,
-      )
+      client.Model(route: client.SignIn(form: form.new(), state: network.Idle))
       |> client.view()
-      |> web.layout(session: option.None)
+      |> web.layout()
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -161,22 +154,9 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
       let session = session.insert(session_id, secret_hash, user.id, ctx.db)
 
-      use session <- web.require_ok(session)
+      use _session <- web.require_ok(session)
 
-      let session =
-        context.Session(
-          id: session.id,
-          user: context.User(id: user.id, email: user.email),
-        )
-
-      client.Model(
-        route: client.SignIn(form: form.new(), state: network.Idle),
-        session: option.Some(session),
-      )
-      |> client.view()
-      |> web.layout(session: option.Some(session))
-      |> element.to_document_string_tree
-      |> wisp.html_response(200)
+      wisp.ok()
       |> session.set_cookie(req, token)
     }
 
@@ -187,11 +167,11 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 fn products(req: wisp.Request, ctx: web.Ctx) {
   use <- wisp.require_method(req, http.Get)
 
-  use session <- web.auth_guard(ctx)
+  use _session <- web.auth_guard(ctx)
 
-  client.Model(route: client.Products, session: option.Some(session))
+  client.Model(route: client.Products)
   |> client.view()
-  |> web.layout(session: option.Some(session))
+  |> web.layout()
   |> element.to_document_string_tree
   |> wisp.html_response(200)
 }

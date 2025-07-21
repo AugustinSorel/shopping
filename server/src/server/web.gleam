@@ -5,16 +5,23 @@ import lustre/element/html
 import pog
 import server/env
 import server/error
-import shared/context
 import wisp
 
+pub type UserCtx {
+  UserCtx(id: Int, email: String)
+}
+
+pub type SessionCtx {
+  SessionCtx(id: String, user: UserCtx)
+}
+
 pub type Ctx {
-  Ctx(db: pog.Connection, env: env.Env, session: option.Option(context.Session))
+  Ctx(db: pog.Connection, env: env.Env, session: option.Option(SessionCtx))
 }
 
 pub fn auth_guard(
   ctx: Ctx,
-  cb: fn(context.Session) -> wisp.Response,
+  cb: fn(SessionCtx) -> wisp.Response,
 ) -> wisp.Response {
   case ctx.session {
     option.Some(session) -> cb(session)
@@ -58,10 +65,7 @@ pub fn get_static_dir() {
   priv_directory <> "/static"
 }
 
-pub fn layout(
-  children children: element.Element(a),
-  session session: option.Option(context.Session),
-) {
+pub fn layout(children children: element.Element(a)) {
   html.html([], [
     html.head([], [
       html.link([
@@ -72,15 +76,6 @@ pub fn layout(
         [attribute.src("/static/client.mjs"), attribute.type_("module")],
         "",
       ),
-      case session {
-        option.None -> element.none()
-        option.Some(session) -> {
-          html.script(
-            [attribute.type_("application/json"), attribute.id("session")],
-            context.encode_session(session),
-          )
-        }
-      },
     ]),
     html.body([attribute.class("bg-surface text-on-surface mb-24 p-4")], [
       html.div([attribute.id("app")], [children]),

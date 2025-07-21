@@ -12,7 +12,6 @@ import server/auth
 import server/error
 import server/user
 import server/web
-import shared/context
 import wisp
 
 pub type Session {
@@ -260,8 +259,8 @@ pub fn validate(candidate_token: String, ctx: web.Ctx) {
 
   use _ <- result.try(refresh_session)
 
-  Ok(context.Session(
+  Ok(web.SessionCtx(
     id: session.id,
-    user: context.User(id: session.user.id, email: session.user.email),
+    user: web.UserCtx(id: session.user.id, email: session.user.email),
   ))
 }
