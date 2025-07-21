@@ -19,12 +19,32 @@ pub fn decode_sign_up(json: dynamic.Dynamic) {
   Ok(sign_up)
 }
 
+pub fn decode_sign_in(json: dynamic.Dynamic) {
+  let res = {
+    decode.run(json, sign_in_decoder())
+    |> result.map_error(fn(e) {
+      error.UserValidation(errors: error.decode_to_validation(e))
+    })
+  }
+
+  use sign_in <- result.try(res)
+
+  Ok(sign_in)
+}
+
 fn sign_up_decoder() -> decode.Decoder(auth.SignUpInput) {
   use email <- decode.field("email", decode.string)
   use password <- decode.field("password", decode.string)
   use confirm_password <- decode.field("confirm_password", decode.string)
 
   decode.success(auth.SignUpInput(email:, password:, confirm_password:))
+}
+
+fn sign_in_decoder() -> decode.Decoder(auth.SignInInput) {
+  use email <- decode.field("email", decode.string)
+  use password <- decode.field("password", decode.string)
+
+  decode.success(auth.SignInInput(email:, password:))
 }
 
 pub fn hash_secret(secret: BitArray) {

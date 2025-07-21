@@ -91,7 +91,7 @@ pub fn decode_form(values: List(#(String, String))) {
 
 pub fn view(
   form form: form.Form,
-  state state: network.State(Nil),
+  state state: network.State(a),
   on_submit on_submit,
 ) {
   html.main([attribute.class("max-w-app mx-auto py-10 space-y-15")], [

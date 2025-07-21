@@ -6856,6 +6856,13 @@ var SignUpInput = class extends CustomType {
     this.confirm_password = confirm_password;
   }
 };
+var SignInInput = class extends CustomType {
+  constructor(email, password) {
+    super();
+    this.email = email;
+    this.password = password;
+  }
+};
 
 // build/dev/javascript/client/network.mjs
 var Idle = class extends CustomType {
@@ -9642,7 +9649,104 @@ function spinner2(attr, size2) {
 }
 
 // build/dev/javascript/client/pages/sign_in.mjs
-function view2(form2, on_submit2) {
+function sign_in(body, handle_response) {
+  let body$1 = object2(
+    toList([
+      ["email", string4(body.email)],
+      ["password", string4(body.password)]
+    ])
+  );
+  return post(
+    "/sign-in",
+    body$1,
+    expect_ok_response(handle_response)
+  );
+}
+function decode_form(values3) {
+  let _pipe = decoding(
+    parameter(
+      (email) => {
+        return parameter(
+          (password) => {
+            return new SignInInput(email, password);
+          }
+        );
+      }
+    )
+  );
+  let _pipe$1 = with_values(_pipe, values3);
+  let _pipe$2 = field2(
+    _pipe$1,
+    "email",
+    (() => {
+      let _pipe$22 = string3;
+      let _pipe$32 = and(
+        _pipe$22,
+        (() => {
+          let _pipe$33 = must_be_an_email;
+          return message(_pipe$33, "email must be valid");
+        })()
+      );
+      let _pipe$4 = and(
+        _pipe$32,
+        (() => {
+          let _pipe$42 = must_not_be_empty;
+          return message(_pipe$42, "email cannot be blank");
+        })()
+      );
+      let _pipe$5 = and(
+        _pipe$4,
+        (() => {
+          let _pipe$52 = must_be_string_longer_than(3);
+          return message(_pipe$52, "email must be at least 3 characters");
+        })()
+      );
+      return and(
+        _pipe$5,
+        (() => {
+          let _pipe$6 = must_be_string_shorter_than(255);
+          return message(_pipe$6, "email must be at most 255 characters");
+        })()
+      );
+    })()
+  );
+  let _pipe$3 = field2(
+    _pipe$2,
+    "password",
+    (() => {
+      let _pipe$32 = string3;
+      let _pipe$4 = and(
+        _pipe$32,
+        (() => {
+          let _pipe$42 = must_not_be_empty;
+          return message(_pipe$42, "password cannot be blank");
+        })()
+      );
+      let _pipe$5 = and(
+        _pipe$4,
+        (() => {
+          let _pipe$52 = must_be_string_longer_than(3);
+          return message(
+            _pipe$52,
+            "password must be at least 3 characters"
+          );
+        })()
+      );
+      return and(
+        _pipe$5,
+        (() => {
+          let _pipe$6 = must_be_string_shorter_than(255);
+          return message(
+            _pipe$6,
+            "password must be at most 255 characters"
+          );
+        })()
+      );
+    })()
+  );
+  return finish(_pipe$3);
+}
+function view2(form2, state, on_submit2) {
   return main(
     toList([class$("max-w-app mx-auto py-10 space-y-15")]),
     toList([
@@ -9728,13 +9832,49 @@ function view2(form2, on_submit2) {
               })()
             ])
           ),
+          (() => {
+            if (state instanceof Err) {
+              let msg = state.msg;
+              return alert(
+                new Destructive(),
+                toList([]),
+                toList([
+                  circle_alert(toList([])),
+                  alert_title(
+                    toList([]),
+                    toList([text3("something went wrong")])
+                  ),
+                  alert_description(toList([]), toList([text3(msg)]))
+                ])
+              );
+            } else {
+              return none2();
+            }
+          })(),
           button2(
             new Default(),
             new Medium2(),
-            toList([type_("submit")]),
             toList([
-              text3("sign up"),
-              spinner2(toList([]), new Small())
+              type_("submit"),
+              disabled(
+                (() => {
+                  if (state instanceof Loading) {
+                    return true;
+                  } else {
+                    return false;
+                  }
+                })()
+              )
+            ]),
+            toList([
+              text3("sign in"),
+              (() => {
+                if (state instanceof Loading) {
+                  return spinner2(toList([]), new Small());
+                } else {
+                  return none2();
+                }
+              })()
             ])
           )
         ])
@@ -9773,7 +9913,7 @@ function sign_up(body, handle_response) {
     expect_ok_response(handle_response)
   );
 }
-function decode_form(values3) {
+function decode_form2(values3) {
   let _pipe = decoding(
     parameter(
       (email) => {
@@ -10096,9 +10236,10 @@ var SignUp = class extends CustomType {
   }
 };
 var SignIn = class extends CustomType {
-  constructor(form2) {
+  constructor(form2, state) {
     super();
     this.form = form2;
+    this.state = state;
   }
 };
 var Products = class extends CustomType {
@@ -10144,6 +10285,12 @@ var ApiReturnedSignUp = class extends CustomType {
     this[0] = $0;
   }
 };
+var ApiReturnedSignIn = class extends CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+};
 function uri_to_route(uri) {
   let $ = path_segments(uri.path);
   if ($ instanceof Empty) {
@@ -10155,7 +10302,7 @@ function uri_to_route(uri) {
       if ($2 === "sign-up") {
         return new SignUp(new$(), new Idle());
       } else if ($2 === "sign-in") {
-        return new SignIn(new$());
+        return new SignIn(new$(), new Idle());
       } else if ($2 === "") {
         return new Products();
       } else if ($2 === "products") {
@@ -10232,7 +10379,7 @@ function update2(model, msg) {
     if ($ instanceof SignUp) {
       let sign_up2 = $;
       let form2 = msg.form;
-      let $1 = decode_form(form2);
+      let $1 = decode_form2(form2);
       if ($1 instanceof Ok) {
         let form$1 = $1[0];
         return [
@@ -10271,16 +10418,38 @@ function update2(model, msg) {
     }
   } else if (msg instanceof UserSubmittedSignInForm) {
     if ($ instanceof SignIn) {
+      let sign_in2 = $;
       let form2 = msg.form;
       let $1 = decode_form(form2);
       if ($1 instanceof Ok) {
-        return [model, navigate(new Products())];
+        let form$1 = $1[0];
+        return [
+          (() => {
+            let _record = model;
+            return new Model(
+              (() => {
+                let _record$1 = sign_in2;
+                return new SignIn(_record$1.form, new Loading());
+              })(),
+              _record.user
+            );
+          })(),
+          sign_in(
+            form$1,
+            (var0) => {
+              return new ApiReturnedSignIn(var0);
+            }
+          )
+        ];
       } else {
         let form$1 = $1[0];
         return [
           (() => {
             let _record = model;
-            return new Model(new SignIn(form$1), _record.user);
+            return new Model(
+              new SignIn(form$1, new Idle()),
+              _record.user
+            );
           })(),
           none()
         ];
@@ -10288,7 +10457,7 @@ function update2(model, msg) {
     } else {
       return [model, none()];
     }
-  } else {
+  } else if (msg instanceof ApiReturnedSignUp) {
     let $1 = msg[0];
     if ($1 instanceof Ok) {
       if ($ instanceof SignUp) {
@@ -10339,6 +10508,57 @@ function update2(model, msg) {
     } else {
       return [model, none()];
     }
+  } else {
+    let $1 = msg[0];
+    if ($1 instanceof Ok) {
+      if ($ instanceof SignIn) {
+        let sign_in2 = $;
+        return [
+          (() => {
+            let _record = model;
+            return new Model(
+              (() => {
+                let _record$1 = sign_in2;
+                return new SignIn(
+                  _record$1.form,
+                  new Success(void 0)
+                );
+              })(),
+              _record.user
+            );
+          })(),
+          navigate(new Products())
+        ];
+      } else {
+        return [model, none()];
+      }
+    } else if ($ instanceof SignIn) {
+      let sign_in2 = $;
+      let e = $1[0];
+      let _block;
+      if (e instanceof HttpError) {
+        let e$1 = e[0];
+        _block = e$1.body;
+      } else {
+        _block = "something went wrong";
+      }
+      let msg$1 = _block;
+      return [
+        (() => {
+          let _record = model;
+          return new Model(
+            (() => {
+              let _record$1 = sign_in2;
+              return new SignIn(_record$1.form, new Err(msg$1));
+            })(),
+            _record.user
+          );
+        })(),
+        none()
+      ];
+    } else {
+      return [model, none()];
+    }
   }
 }
 function view4(model) {
@@ -10355,8 +10575,10 @@ function view4(model) {
     );
   } else if ($ instanceof SignIn) {
     let form2 = $.form;
+    let state = $.state;
     return view2(
       form2,
+      state,
       (var0) => {
         return new UserSubmittedSignInForm(var0);
       }
@@ -10382,7 +10604,7 @@ function main2() {
       17,
       "main",
       "Pattern match failed, no pattern matched the value.",
-      { value: $, start: 316, end: 365, pattern_start: 327, pattern_end: 332 }
+      { value: $, start: 323, end: 372, pattern_start: 334, pattern_end: 339 }
     );
   }
   return void 0;

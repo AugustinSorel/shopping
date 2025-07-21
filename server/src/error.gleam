@@ -14,9 +14,9 @@ pub type Error {
   UserConflict
   SessionNotFound
   Internal(msg: String)
+  InvalidCredentials
 }
 
-//TODO: refactor this
 pub fn build_response(error: Error) {
   case error {
     Internal(msg:) -> {
@@ -50,7 +50,15 @@ pub fn build_response(error: Error) {
       |> json.to_string_tree
       |> wisp.json_response(409)
     }
-    SessionNotFound -> todo
+    SessionNotFound ->
+      json.object([#("message", json.string("session not found"))])
+      |> json.to_string_tree
+      |> wisp.json_response(wisp.not_found().status)
+
+    InvalidCredentials ->
+      json.object([#("message", json.string("invalid credentials"))])
+      |> json.to_string_tree
+      |> wisp.json_response(401)
   }
 }
 

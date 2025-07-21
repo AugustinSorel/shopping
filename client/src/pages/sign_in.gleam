@@ -1,13 +1,23 @@
 import formal/form
+import gleam/json
 import icon
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/event
+import network
+import rsvp
+import shared/auth
 import view
 
-pub type FormData {
-  FormData(email: String, password: String)
+pub fn sign_in(body: auth.SignInInput, handle_response) {
+  let body =
+    json.object([
+      #("email", json.string(body.email)),
+      #("password", json.string(body.password)),
+    ])
+
+  rsvp.post("/sign-in", body, rsvp.expect_ok_response(handle_response))
 }
 
 pub fn decode_form(values: List(#(String, String))) {
@@ -15,7 +25,7 @@ pub fn decode_form(values: List(#(String, String))) {
     use email <- form.parameter
     use password <- form.parameter
 
-    FormData(email:, password:)
+    auth.SignInInput(email:, password:)
   })
   |> form.with_values(values)
   |> form.field(
@@ -57,7 +67,11 @@ pub fn decode_form(values: List(#(String, String))) {
   |> form.finish
 }
 
-pub fn view(form form: form.Form, on_submit on_submit) {
+pub fn view(
+  form form: form.Form,
+  state state: network.State(a),
+  on_submit on_submit,
+) {
   html.main([attribute.class("max-w-app mx-auto py-10 space-y-15")], [
     html.h1(
       [
@@ -115,11 +129,34 @@ pub fn view(form form: form.Form, on_submit on_submit) {
             }
           },
         ]),
-        //TODO:ROOT
-        view.button(view.Default, view.Medium, [attribute.type_("submit")], [
-          html.text("sign up"),
-          view.spinner([], icon.Small),
-        ]),
+        case state {
+          network.Err(msg:) -> {
+            view.alert(view.Destructive, [], [
+              icon.circle_alert([]),
+              view.alert_title([], [html.text("something went wrong")]),
+              view.alert_description([], [html.text(msg)]),
+            ])
+          }
+          _ -> element.none()
+        },
+        view.button(
+          view.Default,
+          view.Medium,
+          [
+            attribute.type_("submit"),
+            attribute.disabled(case state {
+              network.Loading -> True
+              _ -> False
+            }),
+          ],
+          [
+            html.text("sign in"),
+            case state {
+              network.Loading -> view.spinner([], icon.Small)
+              _ -> element.none()
+            },
+          ],
+        ),
       ],
     ),
     html.p([attribute.class("text-secondary text-sm text-center")], [

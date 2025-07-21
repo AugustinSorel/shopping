@@ -5,6 +5,7 @@ import client
 import error
 import formal/form
 import gleam/bit_array
+import gleam/bool
 import gleam/http
 import gleam/option
 import gleam/result
@@ -95,10 +96,65 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
 }
 
 fn sign_in(req: wisp.Request, ctx: web.Ctx) {
-  use <- wisp.require_method(req, http.Post)
-  use <- web.guest_only(ctx)
+  case req.method {
+    http.Get -> {
+      use <- web.guest_only(ctx)
 
-  todo
+      client.Model(
+        route: client.SignIn(form: form.new(), state: network.Idle),
+        user: option.None,
+      )
+      |> client.view()
+      |> web.layout()
+      |> element.to_document_string_tree
+      |> wisp.html_response(200)
+    }
+
+    http.Post -> {
+      use <- web.guest_only(ctx)
+
+      use json <- wisp.require_json(req)
+
+      let sign_in = auth.decode_sign_in(json)
+
+      use sign_in <- web.require_ok(sign_in)
+
+      let user = {
+        user.get_by_email(sign_in.email, ctx.db)
+        |> result.replace_error(error.InvalidCredentials)
+      }
+
+      use user <- web.require_ok(user)
+
+      let password_valid = {
+        sign_in.password
+        |> bit_array.from_string
+        |> auth.hash_verify(user.password)
+        |> bool.guard(return: Error(error.InvalidCredentials), otherwise: fn() {
+          Ok(Nil)
+        })
+      }
+
+      use _ <- web.require_ok(password_valid)
+
+      let session_id = wisp.random_string(64)
+      let secret = wisp.random_string(64)
+      let secret_hash = {
+        secret |> bit_array.from_string |> auth.sha512_hash
+      }
+
+      let token = session.encode_token(session_id, secret)
+
+      let session = session.insert(session_id, secret_hash, user.id, ctx.db)
+
+      use _session <- web.require_ok(session)
+
+      wisp.ok()
+      |> session.set_cookie(req, token)
+    }
+
+    _ -> wisp.method_not_allowed([http.Get, http.Post])
+  }
 }
 
 fn sign_out(req: wisp.Request, ctx: web.Ctx) {

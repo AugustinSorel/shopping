@@ -12,7 +12,7 @@ import pages/sign_up
 import rsvp
 import shared/auth
 
-pub fn main() {
+pub fn main() -> Nil {
   let app = lustre.application(init, update, view)
   let assert Ok(_) = lustre.start(app, "#app", Nil)
 
@@ -21,7 +21,7 @@ pub fn main() {
 
 pub type Route {
   SignUp(form: form.Form, state: network.State(Nil))
-  SignIn(form: form.Form)
+  SignIn(form: form.Form, state: network.State(Nil))
   Products
   CreateProduct
   Account
@@ -31,7 +31,7 @@ pub type Route {
 pub fn uri_to_route(uri: uri.Uri) -> Route {
   case uri.path_segments(uri.path) {
     ["sign-up"] -> SignUp(form: form.new(), state: network.Idle)
-    ["sign-in"] -> SignIn(form: form.new())
+    ["sign-in"] -> SignIn(form: form.new(), state: network.Idle)
     [] | [""] | ["products"] -> Products
     ["products", "create"] -> CreateProduct
     ["users", "account"] -> Account
@@ -66,6 +66,7 @@ pub type Msg {
   UserSubmittedSignUpForm(form: List(#(String, String)))
   UserSubmittedSignInForm(form: List(#(String, String)))
   ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
+  ApiReturnedSignIn(Result(response.Response(String), rsvp.Error))
 }
 
 fn update(model: Model, msg: Msg) {
@@ -89,13 +90,19 @@ fn update(model: Model, msg: Msg) {
         }
       }
     }
-    SignIn(..), UserSubmittedSignInForm(form:) -> {
-      case sign_up.decode_form(form) {
-        Ok(auth.SignUpInput(..)) -> {
-          #(model, navigate(to: Products))
+    SignIn(..) as sign_in, UserSubmittedSignInForm(form:) -> {
+      case sign_in.decode_form(form) {
+        Ok(auth.SignInInput(..) as form) -> {
+          #(
+            Model(..model, route: SignIn(..sign_in, state: network.Loading)),
+            sign_in.sign_in(form, ApiReturnedSignIn),
+          )
         }
         Error(form) -> {
-          #(Model(..model, route: SignIn(form:)), effect.none())
+          #(
+            Model(..model, route: SignIn(form:, state: network.Idle)),
+            effect.none(),
+          )
         }
       }
     }
@@ -116,6 +123,23 @@ fn update(model: Model, msg: Msg) {
         effect.none(),
       )
     }
+    SignIn(..) as sign_in, ApiReturnedSignIn(Ok(_)) -> {
+      #(
+        Model(..model, route: SignIn(..sign_in, state: network.Success(Nil))),
+        navigate(to: Products),
+      )
+    }
+    SignIn(..) as sign_in, ApiReturnedSignIn(Error(e)) -> {
+      let msg = case e {
+        rsvp.HttpError(e) -> e.body
+        _ -> "something went wrong"
+      }
+
+      #(
+        Model(..model, route: SignIn(..sign_in, state: network.Err(msg:))),
+        effect.none(),
+      )
+    }
     _, _ -> {
       #(model, effect.none())
     }
@@ -128,8 +152,8 @@ fn navigate(to route: Route) {
 
 pub fn view(model: Model) {
   case model.route {
-    SignIn(form:) -> {
-      sign_in.view(form:, on_submit: UserSubmittedSignInForm)
+    SignIn(form:, state:) -> {
+      sign_in.view(form:, state:, on_submit: UserSubmittedSignInForm)
     }
     SignUp(form:, state:) -> {
       sign_up.view(form:, state:, on_submit: UserSubmittedSignUpForm)
