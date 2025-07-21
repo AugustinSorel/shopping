@@ -5,8 +5,6 @@ import lustre/element/html
 import shared/context
 
 pub fn account_page(user: context.User) {
-  echo user
-
   html.main([attribute.class("max-w-app mx-auto space-y-10")], [
     html.header(
       [

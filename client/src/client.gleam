@@ -8,6 +8,7 @@ import formal/form
 import gleam/http/response
 import gleam/option
 import gleam/result
+import gleam/string
 import lustre
 import lustre/effect
 import lustre/element
@@ -203,7 +204,14 @@ pub fn view(model: Model) -> element.Element(Msg) {
       echo route
       echo session
 
-      html.h1([], [html.text("bruhh")])
+      html.h1([], [
+        html.text(
+          "route not found "
+          <> string.inspect(route)
+          <> " , "
+          <> string.inspect(session),
+        ),
+      ])
     }
   }
 }
