@@ -1,4 +1,5 @@
 import app/auth
+import app/network
 import app/session
 import app/user
 import client
@@ -10,7 +11,6 @@ import gleam/http
 import gleam/option
 import gleam/result
 import lustre/element
-import network
 import pog
 import web
 import wisp

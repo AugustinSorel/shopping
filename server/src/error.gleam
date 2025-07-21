@@ -20,7 +20,7 @@ pub type Error {
   SessionSecretInvalid
 }
 
-pub fn build_response(error: Error) {
+pub fn build_response(error: Error) -> wisp.Response {
   case error {
     Internal(msg:) -> {
       json.object([#("message", json.string(msg))])
@@ -57,18 +57,19 @@ pub fn build_response(error: Error) {
       json.object([#("message", json.string("session not found"))])
       |> json.to_string_tree
       |> wisp.json_response(wisp.not_found().status)
-
     InvalidCredentials ->
       json.object([#("message", json.string("invalid credentials"))])
       |> json.to_string_tree
       |> wisp.json_response(401)
-    SessionTokenValidation -> todo
-    SessionExpired -> todo
-    SessionSecretInvalid -> todo
+    SessionSecretInvalid | SessionTokenValidation | SessionExpired -> {
+      json.object([#("message", json.string("session is invalid"))])
+      |> json.to_string_tree
+      |> wisp.json_response(401)
+    }
   }
 }
 
-pub fn decode_to_validation(errors) {
+pub fn decode_to_validation(errors) -> List(Validation) {
   list.map(errors, fn(e) {
     case e {
       decode.DecodeError(expected:, found:, path:) -> {
