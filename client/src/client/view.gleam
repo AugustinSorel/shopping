@@ -1,4 +1,5 @@
 import client/icon
+import client/route
 import client/styles
 import glailwind_merge
 import gleam/bool
@@ -142,7 +143,7 @@ pub fn avatar(value: String) {
   )
 }
 
-pub fn footer(current_path: String) {
+pub fn footer(route route: route.Route) {
   html.footer(
     [
       attribute.class(
@@ -155,9 +156,10 @@ pub fn footer(current_path: String) {
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href("/products"),
+          attribute.href(route.to_href(route.Products)),
           attribute.aria_current(
-            bool.to_string(current_path == "/products") |> string.lowercase,
+            bool.to_string(route == route.Products)
+            |> string.lowercase,
           ),
         ],
         [
@@ -183,9 +185,9 @@ pub fn footer(current_path: String) {
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href("/products/create"),
+          attribute.href(route.to_href(route.CreateProduct)),
           attribute.aria_current(
-            bool.to_string(current_path == "/products/create")
+            bool.to_string(route == route.CreateProduct)
             |> string.lowercase,
           ),
         ],
@@ -214,9 +216,9 @@ pub fn footer(current_path: String) {
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href("/users/account"),
+          attribute.href(route.to_href(route.Account)),
           attribute.aria_current(
-            bool.to_string(current_path == "/users/account")
+            bool.to_string(route == route.Account)
             |> string.lowercase,
           ),
         ],

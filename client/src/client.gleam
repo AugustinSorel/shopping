@@ -1,61 +1,57 @@
 import client/auth
 import client/network
+import client/product
+import client/route
+import client/user
 import client/view
 import formal/form
 import gleam/http/response
-import gleam/uri
+import gleam/option
+import gleam/result
 import lustre
 import lustre/effect
 import lustre/element
 import lustre/element/html
-import lustre/event
 import modem
+import plinth/browser/document
+import plinth/browser/element as browser_element
 import rsvp
 import shared/auth as shared_auth
+import shared/context
 
 pub fn main() -> Nil {
+  let hydration = hydration_payload()
+
+  let session = {
+    hydration.session |> context.decode_session() |> option.from_result
+  }
+
   let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", Nil)
+  let assert Ok(_) = lustre.start(app, "#app", Flags(session:))
 
   Nil
 }
 
-pub type Route {
-  SignUp(form: form.Form, state: network.State(Nil))
-  SignIn(form: form.Form, state: network.State(Nil))
-  Products
-  CreateProduct
-  Account
-  NotFound(uri: uri.Uri)
-}
-
-pub fn uri_to_route(uri: uri.Uri) -> Route {
-  case uri.path_segments(uri.path) {
-    ["sign-up"] -> SignUp(form: form.new(), state: network.Idle)
-    ["sign-in"] -> SignIn(form: form.new(), state: network.Idle)
-    [] | [""] | ["products"] -> Products
-    ["products", "create"] -> CreateProduct
-    ["users", "account"] -> Account
-    _ -> NotFound(uri:)
-  }
-}
-
 pub type Model {
-  Model(route: Route)
+  Model(route: route.Route, session: option.Option(context.Session))
 }
 
-fn init(_flags: Nil) -> #(Model, effect.Effect(Msg)) {
+pub type Flags {
+  Flags(session: option.Option(context.Session))
+}
+
+fn init(flags: Flags) -> #(Model, effect.Effect(Msg)) {
   let route = case modem.initial_uri() {
-    Ok(uri) -> uri_to_route(uri)
-    Error(_) -> SignUp(form: form.new(), state: network.Idle)
+    Ok(uri) -> route.from_uri(uri)
+    Error(_) -> route.SignUp(form: form.new(), state: network.Idle)
   }
 
-  let model = Model(route:)
+  let model = Model(route:, session: flags.session)
 
   let effect =
     modem.init(fn(uri) {
       uri
-      |> uri_to_route
+      |> route.from_uri
       |> UserNavigatedTo
     })
 
@@ -63,7 +59,7 @@ fn init(_flags: Nil) -> #(Model, effect.Effect(Msg)) {
 }
 
 pub type Msg {
-  UserNavigatedTo(route: Route)
+  UserNavigatedTo(route: route.Route)
   UserSubmittedSignUpForm(form: List(#(String, String)))
   UserSubmittedSignInForm(form: List(#(String, String)))
   UserClickedSignOut
@@ -75,70 +71,95 @@ pub type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case model.route, msg {
     _, UserNavigatedTo(route:) -> {
-      #(Model(route:), effect.none())
+      #(Model(..model, route:), effect.none())
     }
-    SignUp(..) as sign_up, UserSubmittedSignUpForm(form:) -> {
+    route.SignUp(..) as sign_up, UserSubmittedSignUpForm(form:) -> {
       case auth.decode_sign_up_form(form) {
         Ok(shared_auth.SignUpInput(..) as form) -> {
           #(
-            Model(route: SignUp(..sign_up, state: network.Loading)),
+            Model(
+              ..model,
+              route: route.SignUp(..sign_up, state: network.Loading),
+            ),
             auth.sign_up_post(form, ApiReturnedSignUp),
           )
         }
         Error(form) -> {
-          #(Model(route: SignUp(form:, state: network.Idle)), effect.none())
+          #(
+            Model(..model, route: route.SignUp(form:, state: network.Idle)),
+            effect.none(),
+          )
         }
       }
     }
-    SignIn(..) as sign_in, UserSubmittedSignInForm(form:) -> {
+    route.SignIn(..) as sign_in, UserSubmittedSignInForm(form:) -> {
       case auth.decode_sign_in_form(form) {
         Ok(shared_auth.SignInInput(..) as form) -> {
           #(
-            Model(route: SignIn(..sign_in, state: network.Loading)),
+            Model(
+              ..model,
+              route: route.SignIn(..sign_in, state: network.Loading),
+            ),
             auth.sign_in_post(form, ApiReturnedSignIn),
           )
         }
         Error(form) -> {
-          #(Model(route: SignIn(form:, state: network.Idle)), effect.none())
+          #(
+            Model(..model, route: route.SignIn(form:, state: network.Idle)),
+            effect.none(),
+          )
         }
       }
     }
-    SignUp(..) as sign_up, ApiReturnedSignUp(Ok(_)) -> {
+    route.SignUp(..) as sign_up, ApiReturnedSignUp(Ok(res)) -> {
+      let session = context.decode_session(res.body) |> option.from_result
+
       #(
-        Model(route: SignUp(..sign_up, state: network.Success(Nil))),
-        navigate(to: Products),
+        Model(
+          route: route.SignUp(..sign_up, state: network.Success(Nil)),
+          session:,
+        ),
+        navigate(to: route.Products),
       )
     }
-    SignUp(..) as sign_up, ApiReturnedSignUp(Error(e)) -> {
+    route.SignUp(..) as sign_up, ApiReturnedSignUp(Error(e)) -> {
       let msg = case e {
         rsvp.HttpError(e) -> e.body
         _ -> "something went wrong"
       }
 
       #(
-        Model(route: SignUp(..sign_up, state: network.Err(msg:))),
+        Model(..model, route: route.SignUp(..sign_up, state: network.Err(msg:))),
         effect.none(),
       )
     }
-    SignIn(..) as sign_in, ApiReturnedSignIn(Ok(_)) -> {
+    route.SignIn(..) as sign_in, ApiReturnedSignIn(Ok(res)) -> {
+      let session = context.decode_session(res.body) |> option.from_result
+
       #(
-        Model(route: SignIn(..sign_in, state: network.Success(Nil))),
-        navigate(to: Products),
+        Model(
+          route: route.SignIn(..sign_in, state: network.Success(Nil)),
+          session:,
+        ),
+        navigate(to: route.Products),
       )
     }
-    SignIn(..) as sign_in, ApiReturnedSignIn(Error(e)) -> {
+    route.SignIn(..) as sign_in, ApiReturnedSignIn(Error(e)) -> {
       let msg = case e {
         rsvp.HttpError(e) -> e.body
         _ -> "something went wrong"
       }
 
       #(
-        Model(route: SignIn(..sign_in, state: network.Err(msg:))),
+        Model(..model, route: route.SignIn(..sign_in, state: network.Err(msg:))),
         effect.none(),
       )
     }
     _, ApiReturnedSignOut(Ok(_)) -> {
-      #(model, navigate(to: SignUp(form: form.new(), state: network.Idle)))
+      #(
+        Model(..model, session: option.None),
+        navigate(to: route.SignUp(form: form.new(), state: network.Idle)),
+      )
     }
     _, ApiReturnedSignOut(Error(_)) -> {
       #(model, effect.none())
@@ -153,35 +174,50 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   }
 }
 
-fn navigate(to route: Route) -> effect.Effect(Msg) {
+fn navigate(to route: route.Route) -> effect.Effect(Msg) {
   effect.from(fn(dispatch) { dispatch(UserNavigatedTo(route:)) })
 }
 
 pub fn view(model: Model) -> element.Element(Msg) {
-  case model.route {
-    SignIn(form:, state:) -> {
+  case model.route, model.session {
+    route.SignIn(form:, state:), option.None -> {
       auth.sign_in_view(form:, state:, on_submit: UserSubmittedSignInForm)
     }
-    SignUp(form:, state:) -> {
+    route.SignUp(form:, state:), option.None -> {
       auth.sign_up_view(form:, state:, on_submit: UserSubmittedSignUpForm)
     }
-    Account -> {
-      html.h1([], [html.text("/users/account")])
+    route.Account as route, option.Some(session) -> {
+      element.fragment([user.account_page(session.user), view.footer(route:)])
     }
-    CreateProduct -> {
+    route.CreateProduct, option.Some(..) -> {
       html.h1([], [html.text("/products/create")])
     }
-    Products -> {
-      html.h1([], [
-        html.text("/products"),
-        html.button([event.on_click(UserClickedSignOut)], [
-          html.text("sign out"),
-        ]),
-        view.footer("/products"),
-      ])
+    route.Products, option.Some(..) -> {
+      product.page(UserClickedSignOut)
     }
-    NotFound(_uri) -> {
+    route.NotFound(_uri), _ -> {
       html.h1([], [html.text("not found")])
     }
+
+    _ as route, _ as session -> {
+      echo route
+      echo session
+
+      html.h1([], [html.text("bruhh")])
+    }
   }
+}
+
+type Hydration {
+  Hydration(session: String)
+}
+
+fn hydration_payload() {
+  let session = {
+    document.query_selector("#session")
+    |> result.map(browser_element.inner_text)
+    |> result.unwrap("")
+  }
+
+  Hydration(session:)
 }

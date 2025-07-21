@@ -1,11 +1,15 @@
 import client
+import client/auth as client_auth
 import client/network
+import client/product
+import client/user as client_user
 import formal/form
 import gleam/bit_array
 import gleam/bool
 import gleam/http
 import gleam/option
 import gleam/result
+import gleam/string_tree
 import lustre/element
 import pog
 import server/auth
@@ -13,6 +17,7 @@ import server/error
 import server/session
 import server/user
 import server/web
+import shared/context
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
@@ -33,6 +38,8 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
     [] | ["products"] -> products(req, ctx)
 
+    ["users", "account"] -> user_account(req, ctx)
+
     _ -> wisp.not_found()
   }
 }
@@ -42,9 +49,12 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(route: client.SignUp(form: form.new(), state: network.Idle))
-      |> client.view()
-      |> web.layout()
+      client_auth.sign_up_view(
+        form: form.new(),
+        state: network.Idle,
+        on_submit: client.UserSubmittedSignUpForm,
+      )
+      |> web.layout(session: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -78,9 +88,9 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
 
           let session = session.insert(session_id, secret_hash, user.id, db)
 
-          use _session <- result.try(session)
+          use session <- result.try(session)
 
-          Ok(token)
+          Ok(#(token, session, user))
         })
         |> result.map_error(fn(e) {
           case e {
@@ -91,9 +101,14 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
           }
         })
 
-      use token <- web.require_ok(tx)
+      use #(token, session, user) <- web.require_ok(tx)
 
-      wisp.created()
+      context.encode_session(context.Session(
+        id: session.id,
+        user: context.User(id: user.id, email: user.email),
+      ))
+      |> string_tree.from_string()
+      |> wisp.json_response(wisp.created().status)
       |> session.set_cookie(req, token)
     }
     _ -> wisp.method_not_allowed([http.Get, http.Post])
@@ -105,9 +120,12 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(route: client.SignIn(form: form.new(), state: network.Idle))
-      |> client.view()
-      |> web.layout()
+      client_auth.sign_in_view(
+        form: form.new(),
+        state: network.Idle,
+        on_submit: client.UserSubmittedSignInForm,
+      )
+      |> web.layout(session: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -154,9 +172,14 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
       let session = session.insert(session_id, secret_hash, user.id, ctx.db)
 
-      use _session <- web.require_ok(session)
+      use session <- web.require_ok(session)
 
-      wisp.ok()
+      context.encode_session(context.Session(
+        id: session.id,
+        user: context.User(id: user.id, email: user.email),
+      ))
+      |> string_tree.from_string()
+      |> wisp.json_response(wisp.created().status)
       |> session.set_cookie(req, token)
     }
 
@@ -167,11 +190,10 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 fn products(req: wisp.Request, ctx: web.Ctx) {
   use <- wisp.require_method(req, http.Get)
 
-  use _session <- web.auth_guard(ctx)
+  use session <- web.auth_guard(ctx)
 
-  client.Model(route: client.Products)
-  |> client.view()
-  |> web.layout()
+  product.page(client.UserClickedSignOut)
+  |> web.layout(session: option.Some(session))
   |> element.to_document_string_tree
   |> wisp.html_response(200)
 }
@@ -187,4 +209,15 @@ fn sign_out(req: wisp.Request, ctx: web.Ctx) {
 
   wisp.ok()
   |> session.delete_cookie(req)
+}
+
+fn user_account(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Get)
+
+  use session <- web.auth_guard(ctx)
+
+  client_user.account_page(session.user)
+  |> web.layout(session: option.Some(session))
+  |> element.to_document_string_tree
+  |> wisp.html_response(200)
 }
