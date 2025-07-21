@@ -262,6 +262,6 @@ pub fn validate(candidate_token: String, ctx: web.Ctx) {
 
   Ok(context.Session(
     id: session.id,
-    user: context.User(id: session.user.id, email: session.user.email),
+    user: context.User(email: session.user.email),
   ))
 }

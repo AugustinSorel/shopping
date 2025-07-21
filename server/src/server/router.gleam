@@ -105,7 +105,7 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
 
       context.encode_session(context.Session(
         id: session.id,
-        user: context.User(id: user.id, email: user.email),
+        user: context.User(email: user.email),
       ))
       |> string_tree.from_string()
       |> wisp.json_response(wisp.created().status)
@@ -176,7 +176,7 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
       context.encode_session(context.Session(
         id: session.id,
-        user: context.User(id: user.id, email: user.email),
+        user: context.User(email: user.email),
       ))
       |> string_tree.from_string()
       |> wisp.json_response(wisp.created().status)
