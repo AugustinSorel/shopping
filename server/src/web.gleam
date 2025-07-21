@@ -93,6 +93,8 @@ pub fn layout(
         }
       },
     ]),
-    html.body([], [html.div([attribute.id("app")], [children])]),
+    html.body([attribute.class("bg-surface text-on-surface mb-24 p-4")], [
+      html.div([attribute.id("app")], [children]),
+    ]),
   ])
 }

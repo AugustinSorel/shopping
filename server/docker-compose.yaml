@@ -1,7 +1,7 @@
 services:
   database:
     image: postgres:latest
-    container_name: shopping_db_2
+    container_name: shopping_db
     ports:
       - ${DB_PORT}:5432
     environment:

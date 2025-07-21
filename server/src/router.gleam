@@ -138,9 +138,14 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
         sign_in.password
         |> bit_array.from_string
         |> auth.hash_verify(user.password)
-        |> bool.guard(return: Error(error.InvalidCredentials), otherwise: fn() {
-          Ok(Nil)
-        })
+      }
+
+      let password_valid = {
+        bool.guard(
+          when: !password_valid,
+          return: Error(error.InvalidCredentials),
+          otherwise: fn() { Ok(Nil) },
+        )
       }
 
       use _ <- web.require_ok(password_valid)
