@@ -1,4 +1,3 @@
-import error
 import gleam/bit_array
 import gleam/bool
 import gleam/dynamic/decode
@@ -10,9 +9,10 @@ import gleam/time/duration
 import gleam/time/timestamp
 import pog
 import server/auth
+import server/error
 import server/user
+import server/web
 import shared/context
-import web
 import wisp
 
 pub type Session {

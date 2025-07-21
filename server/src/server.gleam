@@ -1,11 +1,11 @@
-import env
 import gleam/erlang/process
 import gleam/option
 import gleam/otp/static_supervisor
 import mist
 import pog
-import router
-import web
+import server/env
+import server/router
+import server/web
 import wisp
 import wisp/wisp_mist
 

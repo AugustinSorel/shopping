@@ -1,6 +1,5 @@
 import client
 import client/network
-import error
 import formal/form
 import gleam/bit_array
 import gleam/bool
@@ -10,9 +9,10 @@ import gleam/result
 import lustre/element
 import pog
 import server/auth
+import server/error
 import server/session
 import server/user
-import web
+import server/web
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {

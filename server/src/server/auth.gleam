@@ -1,9 +1,9 @@
 import antigone
-import error
 import gleam/crypto
 import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/result
+import server/error
 import shared/auth
 
 pub fn decode_sign_up(json: dynamic.Dynamic) {

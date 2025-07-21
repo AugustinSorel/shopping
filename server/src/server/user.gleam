@@ -1,8 +1,8 @@
-import error
 import gleam/dynamic/decode
 import gleam/result
 import gleam/time/timestamp
 import pog
+import server/error
 
 pub type User {
   User(
