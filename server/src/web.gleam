@@ -1,33 +1,24 @@
 import env
 import error
 import gleam/option
-import gleam/time/timestamp
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import pog
+import shared/session
 import wisp
 
-pub type CtxUser {
-  CtxUser(id: Int, email: String)
-}
-
-pub type CtxSession {
-  CtxSession(
-    id: String,
-    last_verified_at: timestamp.Timestamp,
-    secret_hash: BitArray,
-    user: CtxUser,
-  )
-}
-
 pub type Ctx {
-  Ctx(db: pog.Connection, env: env.Env, session: option.Option(CtxSession))
+  Ctx(
+    db: pog.Connection,
+    env: env.Env,
+    session: option.Option(session.CtxSession),
+  )
 }
 
 pub fn auth_guard(
   ctx: Ctx,
-  cb: fn(CtxSession) -> wisp.Response,
+  cb: fn(session.CtxSession) -> wisp.Response,
 ) -> wisp.Response {
   case ctx.session {
     option.Some(session) -> cb(session)

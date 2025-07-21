@@ -15,6 +15,9 @@ pub type Error {
   SessionNotFound
   Internal(msg: String)
   InvalidCredentials
+  SessionTokenValidation
+  SessionExpired
+  SessionSecretInvalid
 }
 
 pub fn build_response(error: Error) {
@@ -59,6 +62,9 @@ pub fn build_response(error: Error) {
       json.object([#("message", json.string("invalid credentials"))])
       |> json.to_string_tree
       |> wisp.json_response(401)
+    SessionTokenValidation -> todo
+    SessionExpired -> todo
+    SessionSecretInvalid -> todo
   }
 }
 

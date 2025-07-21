@@ -1,10 +1,17 @@
+import app/auth
 import error
+import gleam/bit_array
+import gleam/bool
 import gleam/dynamic/decode
 import gleam/float
+import gleam/order
+import gleam/result
 import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp
 import pog
+import shared/session
+import web
 import wisp
 
 pub type Session {
@@ -81,6 +88,66 @@ pub fn insert(
   }
 }
 
+fn get_by_id(id: String, db: pog.Connection) {
+  let query = {
+    "select
+      sessions.id,
+      sessions.last_verified_at,
+      sessions.secret_hash,
+      users.id,
+      users.email
+    from sessions
+    inner join users on users.id = sessions.user_id
+    where sessions.id = $1"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.text(id))
+    |> pog.returning(ctx_session_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_i, [session, ..])) -> Ok(session)
+    Ok(pog.Returned(_i, [])) -> Error(error.SessionNotFound)
+    Error(_) -> Error(error.Internal(msg: "fetching session failed"))
+  }
+}
+
+pub fn delete(id: String, db: pog.Connection) {
+  let query = {
+    "delete from sessions where id = $1"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.text(id))
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_i, _rows)) -> Ok(Nil)
+    Error(_) -> Error(error.Internal(msg: "deleting session failed"))
+  }
+}
+
+fn refresh_last_verified_at(id: String, db: pog.Connection) {
+  let query = {
+    "update sessions set last_verified_at = now() where id = $1 returning *"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.text(id))
+    |> pog.returning(session_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_i, [session, ..])) -> Ok(session)
+    Ok(pog.Returned(_i, [])) -> Error(error.SessionNotFound)
+    Error(_) -> Error(error.Internal(msg: "refreshing session failed"))
+  }
+}
+
 fn session_row_decoder() {
   use id <- decode.field(0, decode.string)
   use user_id <- decode.field(1, decode.int)
@@ -97,4 +164,82 @@ fn session_row_decoder() {
     created_at:,
     updated_at:,
   ))
+}
+
+fn ctx_session_row_decoder() {
+  use session_id <- decode.field(0, decode.string)
+  use last_verified_at <- decode.field(1, pog.timestamp_decoder())
+  use secret_hash <- decode.field(2, decode.bit_array)
+  use user_id <- decode.field(3, decode.int)
+  use email <- decode.field(4, decode.string)
+
+  decode.success(session.CtxSession(
+    id: session_id,
+    last_verified_at:,
+    secret_hash:,
+    user: session.CtxUser(id: user_id, email:),
+  ))
+}
+
+fn decode_token(token: String) {
+  let split =
+    token
+    |> string.split_once(on: separator)
+    |> result.replace_error(error.SessionTokenValidation)
+
+  use #(session_id, session_secret) <- result.try(split)
+
+  Ok(DecodedToken(session_id:, session_secret:))
+}
+
+fn compare_max_age(to to: timestamp.Timestamp) {
+  let now = timestamp.system_time()
+  let age = timestamp.difference(now, to)
+
+  let max_age = duration.hours(24)
+
+  duration.compare(age, max_age)
+}
+
+pub fn validate(candidate_token: String, ctx: web.Ctx) {
+  use decoded_token <- result.try(decode_token(candidate_token))
+
+  let session = get_by_id(decoded_token.session_id, ctx.db)
+
+  use session <- result.try(session)
+
+  let session_expired = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
+      delete(decoded_token.session_id, ctx.db)
+      |> result.unwrap_error(error.SessionExpired)
+      |> Error
+    }
+    _ -> Ok(Nil)
+  }
+
+  use _ <- result.try(session_expired)
+
+  let valid_secret = {
+    decoded_token.session_secret
+    |> bit_array.from_string
+    |> auth.sha512_hash
+    |> auth.sha512_compare(session.secret_hash)
+  }
+
+  use <- bool.guard(
+    when: !valid_secret,
+    return: Error(error.SessionSecretInvalid),
+  )
+
+  let refresh_session = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
+      refresh_last_verified_at(session.id, ctx.db)
+      |> result.replace(Nil)
+    }
+    _ -> Ok(Nil)
+  }
+
+  use _ <- result.try(refresh_session)
+
+  Ok(session)
 }

@@ -38,7 +38,7 @@
                 '';
 
                 styles-watch = pkgs.writeShellScriptBin "styles_watch" ''
-                  tailwindcss -i ./src/client.css -o ./priv/static/client.css --watch
+                  tailwindcss -i ./client/src/client.css -o ./server/priv/static/client.css --watch
                 '';
 
                 db-cli = pkgs.writeShellScriptBin "db_cli" ''

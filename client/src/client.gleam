@@ -11,6 +11,7 @@ import pages/sign_in
 import pages/sign_up
 import rsvp
 import shared/auth
+import shared/session
 
 pub fn main() -> Nil {
   let app = lustre.application(init, update, view)
@@ -40,7 +41,7 @@ pub fn uri_to_route(uri: uri.Uri) -> Route {
 }
 
 pub type Model {
-  Model(route: Route, user: option.Option(Nil))
+  Model(route: Route, session: option.Option(session.CtxSession))
 }
 
 fn init(_) {
@@ -49,7 +50,7 @@ fn init(_) {
     Error(_) -> SignUp(form: form.new(), state: network.Idle)
   }
 
-  let model = Model(route:, user: option.None)
+  let model = Model(route:, session: option.None)
 
   let effect =
     modem.init(fn(uri) {

@@ -18,12 +18,28 @@ import wisp
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
   use req <- web.middleware(req)
 
-  let ctx = web.Ctx(..ctx, session: option.None)
+  let session =
+    req
+    |> session.get_cookie()
+    |> result.unwrap("")
+    |> session.validate(ctx)
+    |> option.from_result
 
+  let ctx = web.Ctx(..ctx, session:)
   case wisp.path_segments(req) {
     ["sign-up"] -> sign_up(req, ctx)
     ["sign-in"] -> sign_in(req, ctx)
     ["sign-out"] -> sign_out(req, ctx)
+
+    [] | ["products"] -> {
+      use session <- web.auth_guard(ctx)
+
+      client.Model(route: client.Products, session: option.Some(session))
+      |> client.view()
+      |> web.layout()
+      |> element.to_document_string_tree
+      |> wisp.html_response(200)
+    }
 
     _ -> wisp.not_found()
   }
@@ -36,7 +52,7 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
 
       client.Model(
         route: client.SignUp(form: form.new(), state: network.Idle),
-        user: option.None,
+        session: option.None,
       )
       |> client.view()
       |> web.layout()
@@ -102,7 +118,7 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
       client.Model(
         route: client.SignIn(form: form.new(), state: network.Idle),
-        user: option.None,
+        session: option.None,
       )
       |> client.view()
       |> web.layout()
