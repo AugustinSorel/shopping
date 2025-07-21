@@ -1,24 +1,21 @@
 import env
 import error
+import gleam/json
 import gleam/option
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import pog
-import shared/session
+import shared/context
 import wisp
 
 pub type Ctx {
-  Ctx(
-    db: pog.Connection,
-    env: env.Env,
-    session: option.Option(session.CtxSession),
-  )
+  Ctx(db: pog.Connection, env: env.Env, session: option.Option(context.Session))
 }
 
 pub fn auth_guard(
   ctx: Ctx,
-  cb: fn(session.CtxSession) -> wisp.Response,
+  cb: fn(context.Session) -> wisp.Response,
 ) -> wisp.Response {
   case ctx.session {
     option.Some(session) -> cb(session)
@@ -62,7 +59,10 @@ pub fn get_static_dir() {
   priv_directory <> "/static"
 }
 
-pub fn layout(children: element.Element(a)) {
+pub fn layout(
+  children children: element.Element(a),
+  session session: option.Option(context.Session),
+) {
   html.html([], [
     html.head([], [
       html.link([
@@ -73,6 +73,25 @@ pub fn layout(children: element.Element(a)) {
         [attribute.src("/static/client.mjs"), attribute.type_("module")],
         "",
       ),
+      case session {
+        option.None -> element.none()
+        option.Some(session) -> {
+          html.script(
+            [attribute.type_("application/json"), attribute.id("session")],
+            json.object([
+              #("id", json.string(session.id)),
+              #(
+                "user",
+                json.object([
+                  #("id", json.int(session.user.id)),
+                  #("email", json.string(session.user.email)),
+                ]),
+              ),
+            ])
+              |> json.to_string,
+          )
+        }
+      },
     ]),
     html.body([], [html.div([attribute.id("app")], [children])]),
   ])

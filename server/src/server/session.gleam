@@ -10,7 +10,8 @@ import gleam/time/duration
 import gleam/time/timestamp
 import pog
 import server/auth
-import shared/session
+import server/user
+import shared/context
 import web
 import wisp
 
@@ -22,6 +23,18 @@ pub type Session {
     last_verified_at: timestamp.Timestamp,
     created_at: timestamp.Timestamp,
     updated_at: timestamp.Timestamp,
+  )
+}
+
+pub type SessionWithUser {
+  SessionWithUser(
+    id: String,
+    user_id: Int,
+    secret_hash: BitArray,
+    last_verified_at: timestamp.Timestamp,
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
+    user: user.User,
   )
 }
 
@@ -90,21 +103,13 @@ pub fn insert(
 
 fn get_by_id(id: String, db: pog.Connection) {
   let query = {
-    "select
-      sessions.id,
-      sessions.last_verified_at,
-      sessions.secret_hash,
-      users.id,
-      users.email
-    from sessions
-    inner join users on users.id = sessions.user_id
-    where sessions.id = $1"
+    "select * from sessions inner join users on users.id = sessions.user_id where sessions.id = $1"
   }
 
   let response =
     pog.query(query)
     |> pog.parameter(pog.text(id))
-    |> pog.returning(ctx_session_row_decoder())
+    |> pog.returning(session_with_user_decoder())
     |> pog.execute(db)
 
   case response {
@@ -166,18 +171,32 @@ fn session_row_decoder() {
   ))
 }
 
-fn ctx_session_row_decoder() {
-  use session_id <- decode.field(0, decode.string)
-  use last_verified_at <- decode.field(1, pog.timestamp_decoder())
+fn session_with_user_decoder() {
+  use id <- decode.field(0, decode.string)
+  use user_id <- decode.field(1, decode.int)
   use secret_hash <- decode.field(2, decode.bit_array)
-  use user_id <- decode.field(3, decode.int)
-  use email <- decode.field(4, decode.string)
+  use last_verified_at <- decode.field(3, pog.timestamp_decoder())
+  use created_at <- decode.field(4, pog.timestamp_decoder())
+  use updated_at <- decode.field(5, pog.timestamp_decoder())
+  use email <- decode.field(7, decode.string)
+  use password <- decode.field(8, decode.string)
+  use user_created_at <- decode.field(9, pog.timestamp_decoder())
+  use user_updated_at <- decode.field(10, pog.timestamp_decoder())
 
-  decode.success(session.CtxSession(
-    id: session_id,
-    last_verified_at:,
+  decode.success(SessionWithUser(
+    id:,
+    user_id:,
     secret_hash:,
-    user: session.CtxUser(id: user_id, email:),
+    last_verified_at:,
+    created_at:,
+    updated_at:,
+    user: user.User(
+      id: user_id,
+      email:,
+      password:,
+      created_at: user_created_at,
+      updated_at: user_updated_at,
+    ),
   ))
 }
 
@@ -241,5 +260,8 @@ pub fn validate(candidate_token: String, ctx: web.Ctx) {
 
   use _ <- result.try(refresh_session)
 
-  Ok(session)
+  Ok(context.Session(
+    id: session.id,
+    user: context.User(id: session.user.id, email: session.user.email),
+  ))
 }

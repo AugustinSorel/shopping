@@ -143,8 +143,8 @@ pub fn avatar(value: String) {
   )
 }
 
-pub fn footer(current_path: String, is_signed_in: option.Option(Nil)) {
-  use <- bool.guard(when: option.is_none(is_signed_in), return: element.none())
+pub fn footer(current_path: String, session: option.Option(a)) {
+  use <- bool.guard(when: option.is_none(session), return: element.none())
 
   html.footer(
     [

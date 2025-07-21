@@ -1,8 +1,18 @@
 import error
 import gleam/dynamic/decode
 import gleam/result
+import gleam/time/timestamp
 import pog
-import shared/user
+
+pub type User {
+  User(
+    id: Int,
+    email: String,
+    password: String,
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
+  )
+}
 
 pub fn insert(email: String, password: String, db: pog.Connection) {
   let query = {
@@ -53,5 +63,5 @@ fn user_row_decoder() {
   use created_at <- decode.field(3, pog.timestamp_decoder())
   use updated_at <- decode.field(4, pog.timestamp_decoder())
 
-  decode.success(user.User(id:, email:, password:, created_at:, updated_at:))
+  decode.success(User(id:, email:, password:, created_at:, updated_at:))
 }

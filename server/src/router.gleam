@@ -31,15 +31,7 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["sign-in"] -> sign_in(req, ctx)
     ["sign-out"] -> sign_out(req, ctx)
 
-    [] | ["products"] -> {
-      use _session <- web.auth_guard(ctx)
-
-      client.Model(route: client.Products)
-      |> client.view()
-      |> web.layout()
-      |> element.to_document_string_tree
-      |> wisp.html_response(200)
-    }
+    [] | ["products"] -> products(req, ctx)
 
     _ -> wisp.not_found()
   }
@@ -50,9 +42,12 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(route: client.SignUp(form: form.new(), state: network.Idle))
+      client.Model(
+        route: client.SignUp(form: form.new(), state: network.Idle),
+        session: option.None,
+      )
       |> client.view()
-      |> web.layout()
+      |> web.layout(session: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -113,9 +108,12 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(route: client.SignIn(form: form.new(), state: network.Idle))
+      client.Model(
+        route: client.SignIn(form: form.new(), state: network.Idle),
+        session: option.None,
+      )
       |> client.view()
-      |> web.layout()
+      |> web.layout(session: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -165,6 +163,18 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
     _ -> wisp.method_not_allowed([http.Get, http.Post])
   }
+}
+
+fn products(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Get)
+
+  use session <- web.auth_guard(ctx)
+
+  client.Model(route: client.Products, session: option.Some(session))
+  |> client.view()
+  |> web.layout(session: option.Some(session))
+  |> element.to_document_string_tree
+  |> wisp.html_response(200)
 }
 
 fn sign_out(req: wisp.Request, ctx: web.Ctx) {

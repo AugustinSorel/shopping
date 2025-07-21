@@ -40,6 +40,7 @@ packages = [
   { name = "mist", version = "5.0.2", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_http", "gleam_otp", "gleam_stdlib", "gleam_yielder", "glisten", "gramps", "hpack_erl", "logging"], otp_app = "mist", source = "hex", outer_checksum = "0716CE491EA13E1AA1EFEC4B427593F8EB2B953B6EBDEBE41F15BE3D06A22918" },
   { name = "modem", version = "2.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "lustre"], otp_app = "modem", source = "hex", outer_checksum = "8CAACFCCE88C46A36CE71158B13F541F7A8E36BF63F59A2E554070BBCD09FE9F" },
   { name = "platform", version = "1.0.0", build_tools = ["gleam"], requirements = [], otp_app = "platform", source = "hex", outer_checksum = "8339420A95AD89AAC0F82F4C3DB8DD401041742D6C3F46132A8739F6AEB75391" },
+  { name = "plinth", version = "0.7.1", build_tools = ["gleam"], requirements = ["gleam_javascript", "gleam_json", "gleam_stdlib"], otp_app = "plinth", source = "hex", outer_checksum = "63BB36AACCCCB82FBE46A862CF85CB88EBE4EF280ECDBAC4B6CB042340B9E1D8" },
   { name = "repeatedly", version = "2.1.2", build_tools = ["gleam"], requirements = [], otp_app = "repeatedly", source = "hex", outer_checksum = "93AE1938DDE0DC0F7034F32C1BF0D4E89ACEBA82198A1FE21F604E849DA5F589" },
   { name = "rsvp", version = "1.1.2", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_fetch", "gleam_http", "gleam_httpc", "gleam_javascript", "gleam_json", "gleam_stdlib", "lustre"], otp_app = "rsvp", source = "hex", outer_checksum = "0C0732577712E7CB0E55F057637E62CD36F35306A5E830DC4874B83DA8CE4638" },
   { name = "shared", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_time"], source = "local", path = "../shared" },
@@ -62,5 +63,6 @@ gleeunit = { version = ">= 1.0.0 and < 2.0.0" }
 lustre = { version = ">= 5.2.1 and < 6.0.0" }
 lustre_dev_tools = { version = ">= 1.9.0 and < 2.0.0" }
 modem = { version = ">= 2.1.0 and < 3.0.0" }
+plinth = { version = ">= 0.7.1 and < 1.0.0" }
 rsvp = { version = ">= 1.1.2 and < 2.0.0" }
 shared = { path = "../shared" }
