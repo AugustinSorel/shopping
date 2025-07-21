@@ -204,8 +204,6 @@ pub fn view(model: Model) -> element.Element(Msg) {
       html.h1([], [html.text("/products/create")])
     }
     Products -> {
-      echo model
-
       html.h1([], [
         html.text("/products"),
         html.button([event.on_click(UserClickedSignOut)], [
