@@ -1,4 +1,3 @@
-import app/auth
 import error
 import gleam/bit_array
 import gleam/bool
@@ -10,6 +9,7 @@ import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp
 import pog
+import server/auth
 import shared/session
 import web
 import wisp

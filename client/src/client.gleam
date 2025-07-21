@@ -1,17 +1,16 @@
-import app/network
-import app/sign_in
-import app/sign_up
+import client/auth
+import client/network
 import formal/form
 import gleam/http/response
-import gleam/option
 import gleam/uri
 import lustre
 import lustre/effect
+import lustre/element
 import lustre/element/html
+import lustre/event
 import modem
 import rsvp
-import shared/auth
-import shared/session
+import shared/auth as shared_auth
 
 pub fn main() -> Nil {
   let app = lustre.application(init, update, view)
@@ -41,16 +40,16 @@ pub fn uri_to_route(uri: uri.Uri) -> Route {
 }
 
 pub type Model {
-  Model(route: Route, session: option.Option(session.CtxSession))
+  Model(route: Route)
 }
 
-fn init(_) {
+fn init(_: a) -> #(Model, effect.Effect(Msg)) {
   let route = case modem.initial_uri() {
     Ok(uri) -> uri_to_route(uri)
     Error(_) -> SignUp(form: form.new(), state: network.Idle)
   }
 
-  let model = Model(route:, session: option.None)
+  let model = Model(route:)
 
   let effect =
     modem.init(fn(uri) {
@@ -66,50 +65,46 @@ pub type Msg {
   UserNavigatedTo(route: Route)
   UserSubmittedSignUpForm(form: List(#(String, String)))
   UserSubmittedSignInForm(form: List(#(String, String)))
+  UserClickedSignOut
   ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignIn(Result(response.Response(String), rsvp.Error))
+  ApiReturnedSignOut(Result(response.Response(String), rsvp.Error))
 }
 
-fn update(model: Model, msg: Msg) {
+fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case model.route, msg {
     _, UserNavigatedTo(route:) -> {
-      #(Model(..model, route:), effect.none())
+      #(Model(route:), effect.none())
     }
     SignUp(..) as sign_up, UserSubmittedSignUpForm(form:) -> {
-      case sign_up.decode_form(form) {
-        Ok(auth.SignUpInput(..) as form) -> {
+      case auth.decode_sign_up_form(form) {
+        Ok(shared_auth.SignUpInput(..) as form) -> {
           #(
-            Model(..model, route: SignUp(..sign_up, state: network.Loading)),
-            sign_up.sign_up(form, ApiReturnedSignUp),
+            Model(route: SignUp(..sign_up, state: network.Loading)),
+            auth.sign_up_post(form, ApiReturnedSignUp),
           )
         }
         Error(form) -> {
-          #(
-            Model(..model, route: SignUp(form:, state: network.Idle)),
-            effect.none(),
-          )
+          #(Model(route: SignUp(form:, state: network.Idle)), effect.none())
         }
       }
     }
     SignIn(..) as sign_in, UserSubmittedSignInForm(form:) -> {
-      case sign_in.decode_form(form) {
-        Ok(auth.SignInInput(..) as form) -> {
+      case auth.decode_sign_in_form(form) {
+        Ok(shared_auth.SignInInput(..) as form) -> {
           #(
-            Model(..model, route: SignIn(..sign_in, state: network.Loading)),
-            sign_in.sign_in(form, ApiReturnedSignIn),
+            Model(route: SignIn(..sign_in, state: network.Loading)),
+            auth.sign_in_post(form, ApiReturnedSignIn),
           )
         }
         Error(form) -> {
-          #(
-            Model(..model, route: SignIn(form:, state: network.Idle)),
-            effect.none(),
-          )
+          #(Model(route: SignIn(form:, state: network.Idle)), effect.none())
         }
       }
     }
     SignUp(..) as sign_up, ApiReturnedSignUp(Ok(_)) -> {
       #(
-        Model(..model, route: SignUp(..sign_up, state: network.Success(Nil))),
+        Model(route: SignUp(..sign_up, state: network.Success(Nil))),
         navigate(to: Products),
       )
     }
@@ -120,13 +115,13 @@ fn update(model: Model, msg: Msg) {
       }
 
       #(
-        Model(..model, route: SignUp(..sign_up, state: network.Err(msg:))),
+        Model(route: SignUp(..sign_up, state: network.Err(msg:))),
         effect.none(),
       )
     }
     SignIn(..) as sign_in, ApiReturnedSignIn(Ok(_)) -> {
       #(
-        Model(..model, route: SignIn(..sign_in, state: network.Success(Nil))),
+        Model(route: SignIn(..sign_in, state: network.Success(Nil))),
         navigate(to: Products),
       )
     }
@@ -137,27 +132,37 @@ fn update(model: Model, msg: Msg) {
       }
 
       #(
-        Model(..model, route: SignIn(..sign_in, state: network.Err(msg:))),
+        Model(route: SignIn(..sign_in, state: network.Err(msg:))),
         effect.none(),
       )
     }
+    _, ApiReturnedSignOut(Ok(_)) -> {
+      #(model, navigate(to: SignUp(form: form.new(), state: network.Idle)))
+    }
+    _, ApiReturnedSignOut(Error(_)) -> {
+      #(model, effect.none())
+    }
+    _, UserClickedSignOut -> {
+      #(model, auth.sign_out_post(ApiReturnedSignOut))
+    }
+
     _, _ -> {
       #(model, effect.none())
     }
   }
 }
 
-fn navigate(to route: Route) {
+fn navigate(to route: Route) -> effect.Effect(Msg) {
   effect.from(fn(dispatch) { dispatch(UserNavigatedTo(route:)) })
 }
 
-pub fn view(model: Model) {
+pub fn view(model: Model) -> element.Element(Msg) {
   case model.route {
     SignIn(form:, state:) -> {
-      sign_in.view(form:, state:, on_submit: UserSubmittedSignInForm)
+      auth.sign_in_view(form:, state:, on_submit: UserSubmittedSignInForm)
     }
     SignUp(form:, state:) -> {
-      sign_up.view(form:, state:, on_submit: UserSubmittedSignUpForm)
+      auth.sign_up_view(form:, state:, on_submit: UserSubmittedSignUpForm)
     }
     Account -> {
       html.h1([], [html.text("/users/account")])
@@ -166,7 +171,12 @@ pub fn view(model: Model) {
       html.h1([], [html.text("/products/create")])
     }
     Products -> {
-      html.h1([], [html.text("/products")])
+      html.h1([], [
+        html.text("/products"),
+        html.button([event.on_click(UserClickedSignOut)], [
+          html.text("sign out"),
+        ]),
+      ])
     }
     NotFound(_uri) -> {
       html.h1([], [html.text("not found")])

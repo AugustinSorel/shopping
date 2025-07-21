@@ -1,4 +1,4 @@
-import app/styles
+import client/styles
 import glailwind_merge
 import gleam/list
 import lustre/attribute

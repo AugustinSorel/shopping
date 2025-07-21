@@ -1,5 +1,5 @@
-import app/icon
-import app/styles
+import client/icon
+import client/styles
 import glailwind_merge
 import gleam/bool
 import gleam/list

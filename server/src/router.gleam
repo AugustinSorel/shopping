@@ -1,8 +1,5 @@
-import app/auth
-import app/network
-import app/session
-import app/user
 import client
+import client/network
 import error
 import formal/form
 import gleam/bit_array
@@ -12,6 +9,9 @@ import gleam/option
 import gleam/result
 import lustre/element
 import pog
+import server/auth
+import server/session
+import server/user
 import web
 import wisp
 
@@ -32,9 +32,9 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["sign-out"] -> sign_out(req, ctx)
 
     [] | ["products"] -> {
-      use session <- web.auth_guard(ctx)
+      use _session <- web.auth_guard(ctx)
 
-      client.Model(route: client.Products, session: option.Some(session))
+      client.Model(route: client.Products)
       |> client.view()
       |> web.layout()
       |> element.to_document_string_tree
@@ -50,10 +50,7 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(
-        route: client.SignUp(form: form.new(), state: network.Idle),
-        session: option.None,
-      )
+      client.Model(route: client.SignUp(form: form.new(), state: network.Idle))
       |> client.view()
       |> web.layout()
       |> element.to_document_string_tree
@@ -116,10 +113,7 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.Model(
-        route: client.SignIn(form: form.new(), state: network.Idle),
-        session: option.None,
-      )
+      client.Model(route: client.SignIn(form: form.new(), state: network.Idle))
       |> client.view()
       |> web.layout()
       |> element.to_document_string_tree
@@ -175,7 +169,13 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
 fn sign_out(req: wisp.Request, ctx: web.Ctx) {
   use <- wisp.require_method(req, http.Post)
-  use <- web.guest_only(ctx)
 
-  todo
+  use session <- web.auth_guard(ctx)
+
+  let res = session.delete(session.id, ctx.db)
+
+  use _ <- web.require_ok(res)
+
+  wisp.ok()
+  |> session.delete_cookie(req)
 }
