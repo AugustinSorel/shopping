@@ -1,0 +1,10 @@
+services:
+  database:
+    image: postgres:latest
+    container_name: shopping_db_2
+    ports:
+      - ${DB_PORT}:5432
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_DB=${DB_NAME}

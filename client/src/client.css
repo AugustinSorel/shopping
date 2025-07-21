@@ -78,15 +78,3 @@
     --outline: light-dark(hsl(270 4% 47%), hsl(264 5% 58%));
   }
 }
-
-@layer components {
-  .htmx-indicator {
-    display: none;
-  }
-  .htmx-request .htmx-indicator {
-    display: inline;
-  }
-  .htmx-request.htmx-indicator {
-    display: inline;
-  }
-}

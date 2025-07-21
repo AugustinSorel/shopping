@@ -1,0 +1,109 @@
+import app/auth
+import app/session
+import app/user
+import client
+import error
+import formal/form
+import gleam/bit_array
+import gleam/http
+import gleam/option
+import gleam/result
+import lustre/element
+import network
+import pog
+import web
+import wisp
+
+pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
+  use req <- web.middleware(req)
+
+  let ctx = web.Ctx(..ctx, session: option.None)
+
+  case wisp.path_segments(req) {
+    ["sign-up"] -> sign_up(req, ctx)
+    ["sign-in"] -> sign_in(req, ctx)
+    ["sign-out"] -> sign_out(req, ctx)
+
+    _ -> wisp.not_found()
+  }
+}
+
+fn sign_up(req: wisp.Request, ctx: web.Ctx) {
+  case req.method {
+    http.Get -> {
+      use <- web.guest_only(ctx)
+
+      client.Model(
+        route: client.SignUp(form: form.new(), state: network.Idle),
+        user: option.None,
+      )
+      |> client.view()
+      |> web.layout()
+      |> element.to_document_string_tree
+      |> wisp.html_response(200)
+    }
+
+    http.Post -> {
+      use <- web.guest_only(ctx)
+
+      use json <- wisp.require_json(req)
+
+      let sign_up = auth.decode_sign_up(json)
+
+      use sign_up <- web.require_ok(sign_up)
+
+      let hashed_password = {
+        sign_up.password |> bit_array.from_string |> auth.hash_secret
+      }
+
+      let tx =
+        pog.transaction(ctx.db, fn(db) {
+          let user = user.insert(sign_up.email, hashed_password, db)
+
+          use user <- result.try(user)
+
+          let session_id = wisp.random_string(64)
+          let secret = wisp.random_string(64)
+          let secret_hash = {
+            secret |> bit_array.from_string |> auth.sha512_hash
+          }
+
+          let token = session.encode_token(session_id, secret)
+
+          let session = session.insert(session_id, secret_hash, user.id, db)
+
+          use _session <- result.try(session)
+
+          Ok(token)
+        })
+        |> result.map_error(fn(e) {
+          case e {
+            pog.TransactionQueryError(_) -> {
+              error.Internal(msg: "somehting went wrong")
+            }
+            pog.TransactionRolledBack(e) -> e
+          }
+        })
+
+      use token <- web.require_ok(tx)
+
+      wisp.created()
+      |> session.set_cookie(req, token)
+    }
+    _ -> wisp.method_not_allowed([http.Get, http.Post])
+  }
+}
+
+fn sign_in(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Post)
+  use <- web.guest_only(ctx)
+
+  todo
+}
+
+fn sign_out(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Post)
+  use <- web.guest_only(ctx)
+
+  todo
+}

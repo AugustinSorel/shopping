@@ -1,13 +1,16 @@
 import formal/form
+import gleam/http/response
 import gleam/option
-import gleam/string
 import gleam/uri
 import lustre
 import lustre/effect
 import lustre/element/html
 import modem
+import network
 import pages/sign_in
 import pages/sign_up
+import rsvp
+import shared/auth
 
 pub fn main() {
   let app = lustre.application(init, update, view)
@@ -16,8 +19,8 @@ pub fn main() {
   Nil
 }
 
-type Route {
-  SignUp(form: form.Form)
+pub type Route {
+  SignUp(form: form.Form, state: network.State(Nil))
   SignIn(form: form.Form)
   Products
   CreateProduct
@@ -25,9 +28,9 @@ type Route {
   NotFound(uri: uri.Uri)
 }
 
-fn uri_to_route(uri: uri.Uri) -> Route {
+pub fn uri_to_route(uri: uri.Uri) -> Route {
   case uri.path_segments(uri.path) {
-    ["sign-up"] -> SignUp(form: form.new())
+    ["sign-up"] -> SignUp(form: form.new(), state: network.Idle)
     ["sign-in"] -> SignIn(form: form.new())
     [] | [""] | ["products"] -> Products
     ["products", "create"] -> CreateProduct
@@ -36,14 +39,14 @@ fn uri_to_route(uri: uri.Uri) -> Route {
   }
 }
 
-type Model {
+pub type Model {
   Model(route: Route, user: option.Option(Nil))
 }
 
 fn init(_) {
   let route = case modem.initial_uri() {
     Ok(uri) -> uri_to_route(uri)
-    Error(_) -> SignUp(form: form.new())
+    Error(_) -> SignUp(form: form.new(), state: network.Idle)
   }
 
   let model = Model(route:, user: option.None)
@@ -58,55 +61,78 @@ fn init(_) {
   #(model, effect)
 }
 
-type Msg {
+pub type Msg {
   UserNavigatedTo(route: Route)
   UserSubmittedSignUpForm(form: List(#(String, String)))
   UserSubmittedSignInForm(form: List(#(String, String)))
+  ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
 }
 
 fn update(model: Model, msg: Msg) {
-  case msg {
-    UserNavigatedTo(route:) -> {
+  case model.route, msg {
+    _, UserNavigatedTo(route:) -> {
       #(Model(..model, route:), effect.none())
     }
-    UserSubmittedSignUpForm(form:) -> {
+    SignUp(..) as sign_up, UserSubmittedSignUpForm(form:) -> {
       case sign_up.decode_form(form) {
-        Ok(sign_up.FormData(..) as form) -> {
-          echo "TODO, make a request to /sign-up" <> string.inspect(form)
-
-          #(model, navigate_to(Products))
+        Ok(auth.SignUpInput(..) as form) -> {
+          #(
+            Model(..model, route: SignUp(..sign_up, state: network.Loading)),
+            sign_up.sign_up(form, ApiReturnedSignUp),
+          )
         }
         Error(form) -> {
-          #(Model(..model, route: SignUp(form:)), effect.none())
+          #(
+            Model(..model, route: SignUp(form:, state: network.Idle)),
+            effect.none(),
+          )
         }
       }
     }
-    UserSubmittedSignInForm(form:) -> {
+    SignIn(..), UserSubmittedSignInForm(form:) -> {
       case sign_up.decode_form(form) {
-        Ok(sign_up.FormData(..) as form) -> {
-          echo "TODO, make a request to /sign-in" <> string.inspect(form)
-
-          #(model, navigate_to(Products))
+        Ok(auth.SignUpInput(..)) -> {
+          #(model, navigate(to: Products))
         }
         Error(form) -> {
           #(Model(..model, route: SignIn(form:)), effect.none())
         }
       }
     }
+    SignUp(..) as sign_up, ApiReturnedSignUp(Ok(_)) -> {
+      #(
+        Model(..model, route: SignUp(..sign_up, state: network.Success(Nil))),
+        navigate(to: Products),
+      )
+    }
+    SignUp(..) as sign_up, ApiReturnedSignUp(Error(e)) -> {
+      let msg = case e {
+        rsvp.HttpError(e) -> e.body
+        _ -> "something went wrong"
+      }
+
+      #(
+        Model(..model, route: SignUp(..sign_up, state: network.Err(msg:))),
+        effect.none(),
+      )
+    }
+    _, _ -> {
+      #(model, effect.none())
+    }
   }
 }
 
-fn navigate_to(route: Route) {
+fn navigate(to route: Route) {
   effect.from(fn(dispatch) { dispatch(UserNavigatedTo(route:)) })
 }
 
-fn view(model: Model) {
+pub fn view(model: Model) {
   case model.route {
     SignIn(form:) -> {
       sign_in.view(form:, on_submit: UserSubmittedSignInForm)
     }
-    SignUp(form:) -> {
-      sign_up.view(form:, on_submit: UserSubmittedSignUpForm)
+    SignUp(form:, state:) -> {
+      sign_up.view(form:, state:, on_submit: UserSubmittedSignUpForm)
     }
     Account -> {
       html.h1([], [html.text("/users/account")])

@@ -313,5 +313,5 @@ fn theme_item(value: String) {
 }
 
 pub fn spinner(attr: List(attribute.Attribute(msg)), size: icon.Size) {
-  icon.spinner([attribute.class("htmx-indicator animate-spin"), ..attr], size)
+  icon.spinner([attribute.class("animate-spin"), ..attr], size)
 }

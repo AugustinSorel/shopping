@@ -34,7 +34,7 @@
                 '';
 
                 client-watch = pkgs.writeShellScriptBin "client_watch" ''
-                  gleam run -m lustre/dev start --detect-tailwind=false
+                  watchexec --restart --verbose --wrap-process=session --stop-signal SIGTERM --exts gleam --debounce 500ms --watch src/ -- "gleam run -m lustre/dev build --outdir=../server/priv/static --detect-tailwind=false"
                 '';
 
                 styles-watch = pkgs.writeShellScriptBin "styles_watch" ''
