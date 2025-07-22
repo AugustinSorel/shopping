@@ -169,14 +169,7 @@ pub fn sign_in_view(
       [html.text("welcome back!")],
     ),
     html.form(
-      [
-        attribute.attribute("hx-post", "/sign-up"),
-        attribute.attribute("hx-target", "this"),
-        attribute.attribute("hx-swap", "outerHTML"),
-        attribute.attribute("hx-disabled-elt", "find button[type='submit']"),
-        attribute.class("flex flex-col gap-5"),
-        event.on_submit(on_submit),
-      ],
+      [attribute.class("flex flex-col gap-5"), event.on_submit(on_submit)],
       [
         html.label([attribute.class("flex flex-col gap-1")], [
           html.span([attribute.class("first-letter:capitalize")], [
@@ -272,14 +265,7 @@ pub fn sign_up_view(
       [html.text("welcome")],
     ),
     html.form(
-      [
-        attribute.attribute("hx-post", "/sign-up"),
-        attribute.attribute("hx-target", "this"),
-        attribute.attribute("hx-swap", "outerHTML"),
-        attribute.attribute("hx-disabled-elt", "find button[type='submit']"),
-        attribute.class("flex flex-col gap-5"),
-        event.on_submit(on_submit),
-      ],
+      [attribute.class("flex flex-col gap-5"), event.on_submit(on_submit)],
       [
         html.label([attribute.class("flex flex-col gap-1")], [
           html.span([attribute.class("first-letter:capitalize")], [

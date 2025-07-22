@@ -153,23 +153,6 @@ fn item(product: product.Product) {
       view.checkbox([
         attribute.id(product.id |> int.to_string),
         attribute.checked(option.is_some(product.bought_at)),
-        case product.bought_at {
-          option.Some(_) -> {
-            attribute.attribute(
-              "hx-delete",
-              string.concat(["/products/", int.to_string(product.id), "/bought"]),
-            )
-          }
-          option.None -> {
-            attribute.attribute(
-              "hx-post",
-              string.concat(["/products/", int.to_string(product.id), "/bought"]),
-            )
-          }
-        },
-        attribute.attribute("hx-target", "closest li"),
-        attribute.attribute("hx-swap", "outerHTML"),
-        attribute.attribute("hx-disabled-elt", "this"),
       ]),
     ],
   )
@@ -186,14 +169,7 @@ pub fn create_view(
       [html.text("create product")],
     ),
     html.form(
-      [
-        attribute.attribute("hx-post", "/products"),
-        attribute.attribute("hx-target", "this"),
-        attribute.attribute("hx-swap", "outerHTML"),
-        attribute.attribute("hx-disabled-elt", "find button[type='submit']"),
-        attribute.class("flex flex-col gap-10"),
-        event.on_submit(on_submit),
-      ],
+      [attribute.class("flex flex-col gap-10"), event.on_submit(on_submit)],
       [
         html.label([attribute.class("flex flex-col gap-1")], [
           html.span([attribute.class("first-letter:capitalize")], [

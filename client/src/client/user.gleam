@@ -60,10 +60,6 @@ pub fn preference(
               view.Medium,
               [
                 event.on_click(sign_out_on_submit),
-                attribute.attribute("hx-post", "/sign-out"),
-                attribute.attribute("hx-target", "closest section"),
-                attribute.attribute("hx-swap", "outerHTML"),
-                attribute.attribute("hx-disabled-elt", "this"),
                 attribute.class(
                   "text-error text-md hover:bg-error-container text-md",
                 ),
