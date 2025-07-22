@@ -1,10 +1,10 @@
+import client/styles
 import glailwind_merge
 import gleam/list
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/element/svg
-import styles/styles_utils
 
 pub type Size {
   Small
@@ -25,7 +25,7 @@ fn icon(
     Medium -> [attribute.height(24), attribute.width(24)]
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = glailwind_merge.tw_merge([attr_class, base_class])
 

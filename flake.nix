@@ -33,8 +33,12 @@
                   watchexec --restart --verbose --wrap-process=session --stop-signal SIGTERM --exts gleam --debounce 500ms --watch src/ -- "gleam run"
                 '';
 
+                client-watch = pkgs.writeShellScriptBin "client_watch" ''
+                  watchexec --restart --verbose --wrap-process=session --stop-signal SIGTERM --exts gleam --debounce 500ms --watch src/ -- "gleam run -m lustre/dev build --outdir=../server/priv/static --detect-tailwind=false"
+                '';
+
                 styles-watch = pkgs.writeShellScriptBin "styles_watch" ''
-                  tailwindcss -i ./src/styles/styles.css -o ./priv/static/styles.css --watch
+                  tailwindcss -i ./client/src/client.css -o ./server/priv/static/client.css --watch
                 '';
 
                 db-cli = pkgs.writeShellScriptBin "db_cli" ''
@@ -47,14 +51,15 @@
                   buildInputs = with pkgs;[
                     gleam
                     erlang_28
-                    elixir
-                    beamMinimal27Packages.rebar3
+                    rebar3
                     tailwindcss_4
                     watchman
                     goose
                     watchexec
+                    inotify-tools
 
                     server-watch
+                    client-watch
                     styles-watch
                     db-cli
                   ];

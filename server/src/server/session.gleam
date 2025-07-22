@@ -1,8 +1,5 @@
-import app/error
-import app/web
 import gleam/bit_array
 import gleam/bool
-import gleam/crypto
 import gleam/dynamic/decode
 import gleam/float
 import gleam/order
@@ -11,6 +8,11 @@ import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp
 import pog
+import server/auth
+import server/error
+import server/user
+import server/web
+import shared/context
 import wisp
 
 pub type Session {
@@ -24,6 +26,18 @@ pub type Session {
   )
 }
 
+pub type SessionWithUser {
+  SessionWithUser(
+    id: String,
+    user_id: Int,
+    secret_hash: BitArray,
+    last_verified_at: timestamp.Timestamp,
+    created_at: timestamp.Timestamp,
+    updated_at: timestamp.Timestamp,
+    user: user.User,
+  )
+}
+
 pub type DecodedToken {
   DecodedToken(session_id: String, session_secret: String)
 }
@@ -32,36 +46,8 @@ const separator = "."
 
 const cookie_name = "session_token"
 
-pub fn sha512_hash(secret: BitArray) {
-  crypto.hash(crypto.Sha512, secret)
-}
-
-pub fn sha512_compare(left: BitArray, right: BitArray) {
-  crypto.secure_compare(left, right)
-}
-
 pub fn encode_token(session_id: String, secret: String) {
   [session_id, secret] |> string.join(with: separator)
-}
-
-fn decode_token(token: String) {
-  let split =
-    token
-    |> string.split_once(on: separator)
-    |> result.replace_error(error.SessionTokenValidation)
-
-  use #(session_id, session_secret) <- result.try(split)
-
-  Ok(DecodedToken(session_id:, session_secret:))
-}
-
-fn compare_max_age(to to: timestamp.Timestamp) {
-  let now = timestamp.system_time()
-  let age = timestamp.difference(now, to)
-
-  let max_age = duration.hours(24)
-
-  duration.compare(age, max_age)
 }
 
 pub fn set_cookie(res: wisp.Response, req: wisp.Request, token: String) {
@@ -90,50 +76,7 @@ pub fn get_cookie(req: wisp.Request) {
   wisp.get_cookie(req, cookie_name, wisp.Signed)
 }
 
-pub fn validate(candidate_token: String, ctx: web.Ctx) {
-  use decoded_token <- result.try(decode_token(candidate_token))
-
-  let session = get_by_id(decoded_token.session_id, ctx.db)
-
-  use session <- result.try(session)
-
-  let session_expired = case compare_max_age(to: session.last_verified_at) {
-    order.Gt -> {
-      delete(decoded_token.session_id, ctx.db)
-      |> result.unwrap_error(error.SessionExpired)
-      |> Error
-    }
-    _ -> Ok(Nil)
-  }
-
-  use _ <- result.try(session_expired)
-
-  let valid_secret = {
-    decoded_token.session_secret
-    |> bit_array.from_string
-    |> sha512_hash
-    |> sha512_compare(session.secret_hash)
-  }
-
-  use <- bool.guard(
-    when: !valid_secret,
-    return: Error(error.SessionSecretInvalid),
-  )
-
-  let refresh_session = case compare_max_age(to: session.last_verified_at) {
-    order.Gt -> {
-      refresh_last_verified_at(session.id, ctx.db)
-      |> result.replace(Nil)
-    }
-    _ -> Ok(Nil)
-  }
-
-  use _ <- result.try(refresh_session)
-
-  Ok(session)
-}
-
-pub fn create(
+pub fn insert(
   id id: String,
   secret_hash secret_hash: BitArray,
   user_id user_id: Int,
@@ -160,21 +103,13 @@ pub fn create(
 
 fn get_by_id(id: String, db: pog.Connection) {
   let query = {
-    "select
-      sessions.id,
-      sessions.last_verified_at,
-      sessions.secret_hash,
-      users.id,
-      users.email
-    from sessions
-    inner join users on users.id = sessions.user_id
-    where sessions.id = $1"
+    "select * from sessions inner join users on users.id = sessions.user_id where sessions.id = $1"
   }
 
   let response =
     pog.query(query)
     |> pog.parameter(pog.text(id))
-    |> pog.returning(ctx_session_row_decoder())
+    |> pog.returning(session_with_user_decoder())
     |> pog.execute(db)
 
   case response {
@@ -236,17 +171,97 @@ fn session_row_decoder() {
   ))
 }
 
-fn ctx_session_row_decoder() {
-  use session_id <- decode.field(0, decode.string)
-  use last_verified_at <- decode.field(1, pog.timestamp_decoder())
+fn session_with_user_decoder() {
+  use id <- decode.field(0, decode.string)
+  use user_id <- decode.field(1, decode.int)
   use secret_hash <- decode.field(2, decode.bit_array)
-  use user_id <- decode.field(3, decode.int)
-  use email <- decode.field(4, decode.string)
+  use last_verified_at <- decode.field(3, pog.timestamp_decoder())
+  use created_at <- decode.field(4, pog.timestamp_decoder())
+  use updated_at <- decode.field(5, pog.timestamp_decoder())
+  use email <- decode.field(7, decode.string)
+  use password <- decode.field(8, decode.string)
+  use user_created_at <- decode.field(9, pog.timestamp_decoder())
+  use user_updated_at <- decode.field(10, pog.timestamp_decoder())
 
-  decode.success(web.CtxSession(
-    id: session_id,
-    last_verified_at:,
+  decode.success(SessionWithUser(
+    id:,
+    user_id:,
     secret_hash:,
-    user: web.CtxUser(id: user_id, email:),
+    last_verified_at:,
+    created_at:,
+    updated_at:,
+    user: user.User(
+      id: user_id,
+      email:,
+      password:,
+      created_at: user_created_at,
+      updated_at: user_updated_at,
+    ),
+  ))
+}
+
+fn decode_token(token: String) {
+  let split =
+    token
+    |> string.split_once(on: separator)
+    |> result.replace_error(error.SessionTokenValidation)
+
+  use #(session_id, session_secret) <- result.try(split)
+
+  Ok(DecodedToken(session_id:, session_secret:))
+}
+
+fn compare_max_age(to to: timestamp.Timestamp) {
+  let now = timestamp.system_time()
+  let age = timestamp.difference(now, to)
+
+  let max_age = duration.hours(24)
+
+  duration.compare(age, max_age)
+}
+
+pub fn validate(candidate_token: String, ctx: web.Ctx) {
+  use decoded_token <- result.try(decode_token(candidate_token))
+
+  let session = get_by_id(decoded_token.session_id, ctx.db)
+
+  use session <- result.try(session)
+
+  let session_expired = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
+      delete(decoded_token.session_id, ctx.db)
+      |> result.unwrap_error(error.SessionExpired)
+      |> Error
+    }
+    _ -> Ok(Nil)
+  }
+
+  use _ <- result.try(session_expired)
+
+  let valid_secret = {
+    decoded_token.session_secret
+    |> bit_array.from_string
+    |> auth.sha512_hash
+    |> auth.sha512_compare(session.secret_hash)
+  }
+
+  use <- bool.guard(
+    when: !valid_secret,
+    return: Error(error.SessionSecretInvalid),
+  )
+
+  let refresh_session = case compare_max_age(to: session.last_verified_at) {
+    order.Gt -> {
+      refresh_last_verified_at(session.id, ctx.db)
+      |> result.replace(Nil)
+    }
+    _ -> Ok(Nil)
+  }
+
+  use _ <- result.try(refresh_session)
+
+  Ok(context.Session(
+    id: session.id,
+    user: context.User(id: session.user.id, email: session.user.email),
   ))
 }

@@ -1,15 +1,17 @@
-import app/icon
-import app/web
+import client/icon
+import client/network
+import client/route
+import client/styles
+import formal/form
 import glailwind_merge
 import gleam/bool
-import gleam/list
 import gleam/option
 import gleam/result
 import gleam/string
 import lustre/attribute
 import lustre/element
 import lustre/element/html
-import styles/styles_utils
+import shared/context
 
 pub type Variant {
   Default
@@ -45,7 +47,7 @@ pub fn button(
     Medium -> "h-10 px-4 py-2 rounded-md"
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = {
     glailwind_merge.tw_merge([base_class, variant_class, size_class, attr_class])
@@ -70,7 +72,7 @@ pub fn alert(
     }
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = glailwind_merge.tw_merge([base_class, variant_class, attr_class])
 
@@ -99,7 +101,7 @@ pub fn checkbox(attr: List(attribute.Attribute(msg))) {
     "checked:bg-primary shrink-0 focus-visible:ring-on-surface before:bg-on-primary text-on-surface border-outline flex size-4 cursor-pointer appearance-none items-center justify-center rounded-sm border-2 before:hidden before:size-2.5 before:[clip-path:polygon(14%_44%,0_65%,50%_100%,100%_16%,80%_0%,43%_62%)] checked:border-none checked:before:block focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = glailwind_merge.tw_merge([base_class, attr_class])
 
@@ -111,7 +113,7 @@ pub fn input(attr: List(attribute.Attribute(msg))) {
     "ring-offset-background bg-surface-container-lowest focus-visible:ring-outline border-outline rounded-md border-2 px-5 py-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
   }
 
-  let attr_class = styles_utils.extract_class(attr)
+  let attr_class = styles.extract_class(attr)
 
   let class = glailwind_merge.tw_merge([base_class, attr_class])
 
@@ -121,7 +123,7 @@ pub fn input(attr: List(attribute.Attribute(msg))) {
 pub fn avatar(value: String) {
   let initial = string.first(value) |> result.unwrap("?")
 
-  let hue = styles_utils.hue_from_string(initial)
+  let hue = styles.hue_from_string(initial)
 
   html.span(
     [
@@ -144,8 +146,11 @@ pub fn avatar(value: String) {
   )
 }
 
-pub fn footer(current_path: String, ctx: web.Ctx) {
-  use <- bool.guard(when: option.is_none(ctx.session), return: element.none())
+pub fn footer(
+  route route: route.Route,
+  session session: option.Option(context.Session),
+) {
+  use <- bool.guard(when: option.is_none(session), return: element.none())
 
   html.footer(
     [
@@ -159,9 +164,10 @@ pub fn footer(current_path: String, ctx: web.Ctx) {
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href("/products"),
+          attribute.href(route.to_href(route.Products(network.Idle))),
           attribute.aria_current(
-            bool.to_string(current_path == "/products") |> string.lowercase,
+            bool.to_string(route.to_href(route) == "/")
+            |> string.lowercase,
           ),
         ],
         [
@@ -187,9 +193,17 @@ pub fn footer(current_path: String, ctx: web.Ctx) {
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href("/products/create"),
+          attribute.href(
+            route.to_href(route.CreateProduct(
+              form: form.new(),
+              state: network.Idle,
+            )),
+          ),
           attribute.aria_current(
-            bool.to_string(current_path == "/products/create")
+            bool.to_string(case route {
+              route.CreateProduct(..) -> True
+              _ -> False
+            })
             |> string.lowercase,
           ),
         ],
@@ -218,9 +232,9 @@ pub fn footer(current_path: String, ctx: web.Ctx) {
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href("/users/account"),
+          attribute.href(route.to_href(route.Account)),
           attribute.aria_current(
-            bool.to_string(current_path == "/users/account")
+            bool.to_string(route == route.Account)
             |> string.lowercase,
           ),
         ],
@@ -246,117 +260,6 @@ pub fn footer(current_path: String, ctx: web.Ctx) {
   )
 }
 
-pub fn layout(
-  children: element.Element(msg),
-  current_path: String,
-  ctx: web.Ctx,
-) {
-  html.html([attribute.lang("en")], [
-    html.head([], [
-      html.meta([attribute.charset("utf-8")]),
-      html.meta([
-        attribute.name("viewport"),
-        attribute.content("width=device-width, initial-scale=1"),
-      ]),
-      html.link([
-        attribute.href("/static/styles.css"),
-        attribute.rel("stylesheet"),
-      ]),
-      load_theme_script(),
-      html.script(
-        [
-          attribute.src(
-            "https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js",
-          ),
-        ],
-        "",
-      ),
-      html.script(
-        [attribute.src("https://unpkg.com/hyperscript.org@0.9.14")],
-        "",
-      ),
-      html.meta([
-        attribute.name("htmx-config"),
-        attribute.content(
-          "{\"responseHandling\": [{\"code\":\"...\", \"swap\": true}]}",
-        ),
-      ]),
-      html.title([], "shopping"),
-    ]),
-    html.body([attribute.class("bg-surface text-on-surface mb-24 p-4")], [
-      children,
-      footer(current_path, ctx),
-    ]),
-  ])
-}
-
-const theme_key = "theme"
-
-fn load_theme_script() {
-  html.script([], "
-    const cachedTheme = localStorage.getItem('" <> theme_key <> "');
-
-    if (cachedTheme) {
-      document.documentElement.dataset['" <> theme_key <> "'] = cachedTheme;
-    }
- ")
-}
-
-pub fn theme_switcher() {
-  html.fieldset(
-    [
-      attribute.class("flex items-center gap-0.5 noscript:hidden"),
-      attribute.attribute("_", "
-        init
-          set :system_theme_input to the first <input[value='auto']/>
-          set :theme_key to '" <> theme_key <> "'
-          set :x to 10
-
-          get localStorage[:theme_key] then
-            set selected_theme to it or :system_theme_input.value
-            add @checked to the first <input[value=$selected_theme]/> in me
-          end
-
-        on change
-          if target.value is :system_theme_input.value then
-            remove @data-theme from <html/>
-            localStorage.removeItem(:theme_key)
-          otherwise
-            set <html/>'s @data-theme to target.value
-            set localStorage[:theme_key] to target.value
-          end
-      "),
-    ],
-    [
-      html.legend([attribute.class("sr-only")], [html.text("Theme:")]),
-      ..list.map(["auto", "light", "dark"], theme_item)
-    ],
-  )
-}
-
-fn theme_item(value: String) {
-  html.label(
-    [
-      attribute.class(
-        "bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container has-checked:bg-secondary has-checked:text-on-secondary has-focus-visible:ring-secondary ring-offset-surface-container hover:has-checked:bg-secondary/80 cursor-pointer rounded-sm px-6 py-2 first-of-type:rounded-l-2xl last-of-type:rounded-r-2xl has-checked:rounded-2xl has-focus-visible:z-10 has-focus-visible:ring-2 has-focus-visible:ring-offset-2 has-focus-visible:outline-none has-disabled:pointer-events-none has-disabled:opacity-50",
-      ),
-      attribute.attribute(
-        "_",
-        "on load wait 500ms then add .transition-all to me",
-      ),
-    ],
-    [
-      html.input([
-        attribute.class("sr-only"),
-        attribute.name("theme"),
-        attribute.type_("radio"),
-        attribute.value(value),
-      ]),
-      html.text(value),
-    ],
-  )
-}
-
 pub fn spinner(attr: List(attribute.Attribute(msg)), size: icon.Size) {
-  icon.spinner([attribute.class("htmx-indicator animate-spin"), ..attr], size)
+  icon.spinner([attribute.class("animate-spin"), ..attr], size)
 }
