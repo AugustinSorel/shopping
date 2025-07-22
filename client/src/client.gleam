@@ -20,6 +20,7 @@ import plinth/browser/element as browser_element
 import rsvp
 import shared/auth as shared_auth
 import shared/context
+import shared/product as shared_product
 
 pub fn main() -> Nil {
   let hydration = hydration_payload()
@@ -71,12 +72,14 @@ pub type Msg {
   UserNavigatedTo(route: route.Route)
   UserSubmittedSignUpForm(form: List(#(String, String)))
   UserSubmittedSignInForm(form: List(#(String, String)))
+  UserSubmittedCreateProductForm(form: List(#(String, String)))
   UserClickedSignOut
   UserChangedTheme(theme: theme.Theme)
   UserThemeSynchronized
   ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignIn(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignOut(Result(response.Response(String), rsvp.Error))
+  ApiReturnedCreateProduct(Result(response.Response(String), rsvp.Error))
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
@@ -127,6 +130,33 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         }
       }
     }
+    route.CreateProduct(..) as create_product,
+      UserSubmittedCreateProductForm(form:)
+    -> {
+      case product.decode_create_product_form(form) {
+        Ok(shared_product.CreateProductInput(..) as form) -> {
+          #(
+            Model(
+              ..model,
+              route: route.CreateProduct(
+                ..create_product,
+                state: network.Loading,
+              ),
+            ),
+            product.create_product_post(form, ApiReturnedCreateProduct),
+          )
+        }
+        Error(form) -> {
+          #(
+            Model(
+              ..model,
+              route: route.CreateProduct(form:, state: network.Idle),
+            ),
+            effect.none(),
+          )
+        }
+      }
+    }
     route.SignUp(..) as sign_up, ApiReturnedSignUp(Ok(res)) -> {
       let session = context.decode_session(res.body) |> option.from_result
 
@@ -171,6 +201,34 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         effect.none(),
       )
     }
+    route.CreateProduct(..) as create_product, ApiReturnedCreateProduct(Ok(_)) -> {
+      #(
+        Model(
+          ..model,
+          route: route.CreateProduct(
+            ..create_product,
+            state: network.Success(Nil),
+          ),
+        ),
+        navigate(to: route.Products),
+      )
+    }
+    route.CreateProduct(..) as create_product,
+      ApiReturnedCreateProduct(Error(e))
+    -> {
+      let msg = case e {
+        rsvp.HttpError(e) -> e.body
+        _ -> "something went wrong"
+      }
+
+      #(
+        Model(
+          ..model,
+          route: route.CreateProduct(..create_product, state: network.Err(msg:)),
+        ),
+        effect.none(),
+      )
+    }
     _, ApiReturnedSignOut(Ok(_)) -> {
       #(
         Model(..model, session: option.None),
@@ -180,7 +238,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     _, UserChangedTheme(theme) -> {
       let assert Ok(root) = document.query_selector("html")
 
-      case theme {
+      let _ = case theme {
         theme.Dark | theme.Light -> {
           let _ = theme.save_to_local_storage(theme)
 
@@ -215,6 +273,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     }
 
     _, _ -> {
+      echo "invalid msg"
       #(model, effect.none())
     }
   }
@@ -247,8 +306,12 @@ pub fn view(model: Model) -> element.Element(Msg) {
         view.footer(route:),
       ])
     }
-    route.CreateProduct, option.Some(..) -> {
-      html.h1([], [html.text("/products/create")])
+    route.CreateProduct(form:, state:), option.Some(..) -> {
+      product.create_view(
+        form:,
+        state:,
+        on_submit: UserSubmittedCreateProductForm,
+      )
     }
     route.Products, option.Some(..) -> {
       product.page(UserClickedSignOut)

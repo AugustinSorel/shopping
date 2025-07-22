@@ -1,6 +1,8 @@
 import client/icon
+import client/network
 import client/route
 import client/styles
+import formal/form
 import glailwind_merge
 import gleam/bool
 import gleam/result
@@ -184,9 +186,17 @@ pub fn footer(route route: route.Route) {
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href(route.to_href(route.CreateProduct)),
+          attribute.href(
+            route.to_href(route.CreateProduct(
+              form: form.new(),
+              state: network.Idle,
+            )),
+          ),
           attribute.aria_current(
-            bool.to_string(route == route.CreateProduct)
+            bool.to_string(
+              route
+              == route.CreateProduct(form: form.new(), state: network.Idle),
+            )
             |> string.lowercase,
           ),
         ],

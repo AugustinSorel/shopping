@@ -18,6 +18,7 @@ pub type Error {
   SessionTokenValidation
   SessionExpired
   SessionSecretInvalid
+  ProductValidation(errors: List(Validation))
 }
 
 pub fn build_response(error: Error) -> wisp.Response {
@@ -65,6 +66,22 @@ pub fn build_response(error: Error) -> wisp.Response {
       json.object([#("message", json.string("session is invalid"))])
       |> json.to_string_tree
       |> wisp.json_response(401)
+    }
+    ProductValidation(errors) -> {
+      json.object([
+        #("message", json.string("product validation failed")),
+        #(
+          "errors",
+          json.array(errors, fn(error) {
+            json.object([
+              #("field", json.string(error.field)),
+              #("message", json.string(error.msg)),
+            ])
+          }),
+        ),
+      ])
+      |> json.to_string_tree
+      |> wisp.json_response(wisp.unprocessable_entity().status)
     }
   }
 }

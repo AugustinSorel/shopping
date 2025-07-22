@@ -2,7 +2,7 @@ import gleam/dynamic/decode
 import gleam/json
 
 pub type User {
-  User(email: String)
+  User(id: Int, email: String)
 }
 
 pub type Session {
@@ -12,16 +12,23 @@ pub type Session {
 pub fn decode_session(json_session: String) {
   json.parse(json_session, {
     use id <- decode.field("id", decode.string)
-    use email <- decode.subfield(["user", "email"], decode.string)
+    use user_email <- decode.subfield(["user", "email"], decode.string)
+    use user_id <- decode.subfield(["user", "id"], decode.int)
 
-    decode.success(Session(id:, user: User(email:)))
+    decode.success(Session(id:, user: User(id: user_id, email: user_email)))
   })
 }
 
 pub fn encode_session(session: Session) {
   json.object([
     #("id", json.string(session.id)),
-    #("user", json.object([#("email", json.string(session.user.email))])),
+    #(
+      "user",
+      json.object([
+        #("email", json.string(session.user.email)),
+        #("id", json.int(session.user.id)),
+      ]),
+    ),
   ])
   |> json.to_string
 }

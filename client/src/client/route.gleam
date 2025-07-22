@@ -6,7 +6,7 @@ pub type Route {
   SignUp(form: form.Form, state: network.State(Nil))
   SignIn(form: form.Form, state: network.State(Nil))
   Products
-  CreateProduct
+  CreateProduct(form: form.Form, state: network.State(Nil))
   Account
   NotFound(uri: uri.Uri)
 }
@@ -14,7 +14,7 @@ pub type Route {
 pub fn to_href(route: Route) {
   case route {
     Account -> "/users/account"
-    CreateProduct -> "/products/create"
+    CreateProduct(..) -> "/products/create"
     NotFound(..) -> ""
     Products -> "/products"
     SignIn(..) -> "/sign-in"
@@ -27,7 +27,12 @@ pub fn from_uri(uri: uri.Uri) -> Route {
     ["sign-up"] -> SignUp(form: form.new(), state: network.Idle)
     ["sign-in"] -> SignIn(form: form.new(), state: network.Idle)
     [] | [""] | ["products"] -> Products
-    ["products", "create"] -> CreateProduct
+    ["products", "create"] -> {
+      CreateProduct(
+        form: form.initial_values([#("quantity", "1")]),
+        state: network.Idle,
+      )
+    }
     ["users", "account"] -> Account
     _ -> NotFound(uri:)
   }

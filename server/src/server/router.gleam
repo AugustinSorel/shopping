@@ -1,7 +1,7 @@
 import client
 import client/auth as client_auth
 import client/network
-import client/product
+import client/product as client_product
 import client/user as client_user
 import formal/form
 import gleam/bit_array
@@ -14,6 +14,7 @@ import lustre/element
 import pog
 import server/auth
 import server/error
+import server/product
 import server/session
 import server/user
 import server/web
@@ -107,7 +108,7 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
 
       context.encode_session(context.Session(
         id: session.id,
-        user: context.User(email: user.email),
+        user: context.User(id: user.id, email: user.email),
       ))
       |> string_tree.from_string()
       |> wisp.json_response(wisp.created().status)
@@ -178,7 +179,7 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 
       context.encode_session(context.Session(
         id: session.id,
-        user: context.User(email: user.email),
+        user: context.User(id: user.id, email: user.email),
       ))
       |> string_tree.from_string()
       |> wisp.json_response(wisp.created().status)
@@ -190,14 +191,34 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 }
 
 fn products(req: wisp.Request, ctx: web.Ctx) {
-  use <- wisp.require_method(req, http.Get)
+  case req.method {
+    http.Get -> {
+      use <- wisp.require_method(req, http.Get)
 
-  use session <- web.auth_guard(ctx)
+      use session <- web.auth_guard(ctx)
 
-  product.page(client.UserClickedSignOut)
-  |> web.layout(session: option.Some(session))
-  |> element.to_document_string_tree
-  |> wisp.html_response(200)
+      client_product.page(client.UserClickedSignOut)
+      |> web.layout(session: option.Some(session))
+      |> element.to_document_string_tree
+      |> wisp.html_response(200)
+    }
+    http.Post -> {
+      use session <- web.auth_guard(ctx)
+
+      use json <- wisp.require_json(req)
+
+      let product = product.decode_create_product(json)
+
+      use product <- web.require_ok(product)
+
+      let product = product.insert(product, session.user.id, ctx.db)
+
+      use _product <- web.require_ok(product)
+
+      wisp.created()
+    }
+    _ -> wisp.method_not_allowed([http.Get, http.Post])
+  }
 }
 
 fn sign_out(req: wisp.Request, ctx: web.Ctx) {
@@ -225,7 +246,7 @@ fn user_account(req: wisp.Request, ctx: web.Ctx) {
       sign_out_on_submit: client.UserClickedSignOut,
     ),
   ]
-  |> client_user.account_page(session.user)
+  |> client_user.account_view(session.user)
   |> web.layout(session: option.Some(session))
   |> element.to_document_string_tree
   |> wisp.html_response(200)
@@ -236,14 +257,11 @@ fn products_create(req: wisp.Request, ctx: web.Ctx) {
 
   use session <- web.auth_guard(ctx)
 
-  [
-    client_user.preference(
-      on_theme_change: client.UserChangedTheme,
-      sign_out_state: network.Idle,
-      sign_out_on_submit: client.UserClickedSignOut,
-    ),
-  ]
-  |> client_user.account_page(session.user)
+  client_product.create_view(
+    form: form.new(),
+    state: network.Idle,
+    on_submit: client.UserSubmittedCreateProductForm,
+  )
   |> web.layout(session: option.Some(session))
   |> element.to_document_string_tree
   |> wisp.html_response(200)
