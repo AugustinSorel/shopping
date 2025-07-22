@@ -5,11 +5,13 @@ import client/styles
 import formal/form
 import glailwind_merge
 import gleam/bool
+import gleam/option
 import gleam/result
 import gleam/string
 import lustre/attribute
 import lustre/element
 import lustre/element/html
+import shared/context
 
 pub type Variant {
   Default
@@ -144,7 +146,12 @@ pub fn avatar(value: String) {
   )
 }
 
-pub fn footer(route route: route.Route) {
+pub fn footer(
+  route route: route.Route,
+  session session: option.Option(context.Session),
+) {
+  use <- bool.guard(when: option.is_none(session), return: element.none())
+
   html.footer(
     [
       attribute.class(
@@ -193,10 +200,10 @@ pub fn footer(route route: route.Route) {
             )),
           ),
           attribute.aria_current(
-            bool.to_string(
-              route
-              == route.CreateProduct(form: form.new(), state: network.Idle),
-            )
+            bool.to_string(case route {
+              route.CreateProduct(..) -> True
+              _ -> False
+            })
             |> string.lowercase,
           ),
         ],

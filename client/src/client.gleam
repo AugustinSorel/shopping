@@ -284,27 +284,24 @@ fn navigate(to route: route.Route) -> effect.Effect(Msg) {
 }
 
 pub fn view(model: Model) -> element.Element(Msg) {
-  case model.route, model.session {
+  let children = case model.route, model.session {
     route.SignIn(form:, state:), option.None -> {
       auth.sign_in_view(form:, state:, on_submit: UserSubmittedSignInForm)
     }
     route.SignUp(form:, state:), option.None -> {
       auth.sign_up_view(form:, state:, on_submit: UserSubmittedSignUpForm)
     }
-    route.Account as route, option.Some(session) -> {
-      element.fragment([
-        user.account_view(
-          [
-            user.preference(
-              on_theme_change: UserChangedTheme,
-              sign_out_state: network.Idle,
-              sign_out_on_submit: UserClickedSignOut,
-            ),
-          ],
-          session.user,
-        ),
-        view.footer(route:),
-      ])
+    route.Account, option.Some(session) -> {
+      user.account_view(
+        [
+          user.preference(
+            on_theme_change: UserChangedTheme,
+            sign_out_state: network.Idle,
+            sign_out_on_submit: UserClickedSignOut,
+          ),
+        ],
+        session.user,
+      )
     }
     route.CreateProduct(form:, state:), option.Some(..) -> {
       product.create_view(
@@ -321,9 +318,6 @@ pub fn view(model: Model) -> element.Element(Msg) {
     }
 
     _ as route, _ as session -> {
-      echo route
-      echo session
-
       html.h1([], [
         html.text(
           "route not found "
@@ -334,6 +328,11 @@ pub fn view(model: Model) -> element.Element(Msg) {
       ])
     }
   }
+
+  element.fragment([
+    children,
+    view.footer(route: model.route, session: model.session),
+  ])
 }
 
 type Hydration {
