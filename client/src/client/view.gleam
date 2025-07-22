@@ -164,9 +164,9 @@ pub fn footer(
           attribute.class(
             "group flex cursor-pointer flex-col items-center py-4 text-sm",
           ),
-          attribute.href(route.to_href(route.Products)),
+          attribute.href(route.to_href(route.Products(network.Idle))),
           attribute.aria_current(
-            bool.to_string(route == route.Products)
+            bool.to_string(route.to_href(route) == "/")
             |> string.lowercase,
           ),
         ],

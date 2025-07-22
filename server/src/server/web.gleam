@@ -62,6 +62,7 @@ pub fn get_static_dir() {
 pub fn layout(
   children children: element.Element(a),
   session session: option.Option(context.Session),
+  payload payload: option.Option(element.Element(a)),
 ) {
   html.html([], [
     html.head([], [
@@ -78,10 +79,17 @@ pub fn layout(
         option.None -> element.none()
         option.Some(session) -> {
           html.script(
-            [attribute.type_("application/json"), attribute.id("session")],
+            [
+              attribute.type_("application/json"),
+              attribute.id(context.session_hydration_key),
+            ],
             context.encode_session(session),
           )
         }
+      },
+      case payload {
+        option.None -> element.none()
+        option.Some(payload) -> payload
       },
     ]),
     html.body([attribute.class("bg-surface text-on-surface mb-24 p-4")], [

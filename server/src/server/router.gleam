@@ -1,8 +1,6 @@
 import client
-import client/auth as client_auth
 import client/network
-import client/product as client_product
-import client/user as client_user
+import client/route
 import formal/form
 import gleam/bit_array
 import gleam/bool
@@ -10,7 +8,9 @@ import gleam/http
 import gleam/option
 import gleam/result
 import gleam/string_tree
+import lustre/attribute
 import lustre/element
+import lustre/element/html
 import pog
 import server/auth
 import server/error
@@ -19,6 +19,7 @@ import server/session
 import server/user
 import server/web
 import shared/context
+import shared/product as shared_product
 import wisp
 
 pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
@@ -37,7 +38,9 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["sign-in"] -> sign_in(req, ctx)
     ["sign-out"] -> sign_out(req, ctx)
 
-    [] | ["products"] -> products(req, ctx)
+    [] -> home(req, ctx)
+
+    ["products"] -> products(req, ctx)
 
     ["users", "account"] -> user_account(req, ctx)
 
@@ -47,17 +50,44 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
   }
 }
 
+fn home(req, ctx) {
+  use <- wisp.require_method(req, http.Get)
+  use <- wisp.require_method(req, http.Get)
+
+  use session <- web.auth_guard(ctx)
+
+  let products_by_status = product.get_by_purchase_status(ctx.db)
+
+  use products_by_status <- web.require_ok(products_by_status)
+
+  client.view(client.Model(
+    route: route.Products(state: network.Success(products_by_status)),
+    session: option.Some(session),
+  ))
+  |> web.layout(
+    session: option.Some(session),
+    payload: option.Some(html.script(
+      [
+        attribute.type_("application/json"),
+        attribute.id(shared_product.products_by_status_hydration_key),
+      ],
+      shared_product.encode_products_by_status(products_by_status),
+    )),
+  )
+  |> element.to_document_string_tree
+  |> wisp.html_response(200)
+}
+
 fn sign_up(req: wisp.Request, ctx: web.Ctx) {
   case req.method {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client_auth.sign_up_view(
-        form: form.new(),
-        state: network.Idle,
-        on_submit: client.UserSubmittedSignUpForm,
-      )
-      |> web.layout(session: option.None)
+      client.view(client.Model(
+        route: route.SignUp(form: form.new(), state: network.Idle),
+        session: option.None,
+      ))
+      |> web.layout(session: option.None, payload: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -123,12 +153,11 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client_auth.sign_in_view(
-        form: form.new(),
-        state: network.Idle,
-        on_submit: client.UserSubmittedSignInForm,
-      )
-      |> web.layout(session: option.None)
+      client.view(client.Model(
+        route: route.SignIn(form: form.new(), state: network.Idle),
+        session: option.None,
+      ))
+      |> web.layout(session: option.None, payload: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
     }
@@ -193,14 +222,16 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
 fn products(req: wisp.Request, ctx: web.Ctx) {
   case req.method {
     http.Get -> {
-      use <- wisp.require_method(req, http.Get)
+      use _session <- web.auth_guard(ctx)
 
-      use session <- web.auth_guard(ctx)
+      let products_by_status = product.get_by_purchase_status(ctx.db)
 
-      client_product.page(client.UserClickedSignOut)
-      |> web.layout(session: option.Some(session))
-      |> element.to_document_string_tree
-      |> wisp.html_response(200)
+      use products_by_status <- web.require_ok(products_by_status)
+
+      products_by_status
+      |> shared_product.encode_products_by_status()
+      |> string_tree.from_string()
+      |> wisp.json_response(wisp.ok().status)
     }
     http.Post -> {
       use session <- web.auth_guard(ctx)
@@ -239,15 +270,8 @@ fn user_account(req: wisp.Request, ctx: web.Ctx) {
 
   use session <- web.auth_guard(ctx)
 
-  [
-    client_user.preference(
-      on_theme_change: client.UserChangedTheme,
-      sign_out_state: network.Idle,
-      sign_out_on_submit: client.UserClickedSignOut,
-    ),
-  ]
-  |> client_user.account_view(session.user)
-  |> web.layout(session: option.Some(session))
+  client.view(client.Model(route: route.Account, session: option.Some(session)))
+  |> web.layout(session: option.Some(session), payload: option.None)
   |> element.to_document_string_tree
   |> wisp.html_response(200)
 }
@@ -257,12 +281,14 @@ fn products_create(req: wisp.Request, ctx: web.Ctx) {
 
   use session <- web.auth_guard(ctx)
 
-  client_product.create_view(
-    form: form.new(),
-    state: network.Idle,
-    on_submit: client.UserSubmittedCreateProductForm,
-  )
-  |> web.layout(session: option.Some(session))
+  client.view(client.Model(
+    route: route.CreateProduct(
+      form: form.initial_values([#("quantity", "1")]),
+      state: network.Idle,
+    ),
+    session: option.Some(session),
+  ))
+  |> web.layout(session: option.Some(session), payload: option.None)
   |> element.to_document_string_tree
   |> wisp.html_response(200)
 }

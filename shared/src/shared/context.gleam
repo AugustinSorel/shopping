@@ -1,6 +1,8 @@
 import gleam/dynamic/decode
 import gleam/json
 
+pub const session_hydration_key = "session"
+
 pub type User {
   User(id: Int, email: String)
 }

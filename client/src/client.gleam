@@ -29,8 +29,16 @@ pub fn main() -> Nil {
     hydration.session |> context.decode_session() |> option.from_result
   }
 
+  let products_by_status = {
+    hydration.products_by_status
+    |> shared_product.decode_products_by_status()
+    |> option.from_result
+  }
+
+  let flags = Flags(session:, products_by_status:)
+
   let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", Flags(session:))
+  let assert Ok(_) = lustre.start(app, "#app", flags)
 
   Nil
 }
@@ -40,12 +48,20 @@ pub type Model {
 }
 
 pub type Flags {
-  Flags(session: option.Option(context.Session))
+  Flags(
+    session: option.Option(context.Session),
+    products_by_status: option.Option(shared_product.ProductsByStatus),
+  )
 }
 
 fn init(flags: Flags) -> #(Model, effect.Effect(Msg)) {
+  let products_by_status_network = case flags.products_by_status {
+    option.None -> network.Idle
+    option.Some(data) -> network.Success(data:)
+  }
+
   let route = case modem.initial_uri() {
-    Ok(uri) -> route.from_uri(uri)
+    Ok(uri) -> route.from_uri(uri, products_by_status_network)
     Error(_) -> route.SignUp(form: form.new(), state: network.Idle)
   }
 
@@ -55,7 +71,7 @@ fn init(flags: Flags) -> #(Model, effect.Effect(Msg)) {
     effect.batch([
       modem.init(fn(uri) {
         uri
-        |> route.from_uri
+        |> route.from_uri(products_by_status_network)
         |> UserNavigatedTo
       }),
       sync_user_theme(),
@@ -68,6 +84,10 @@ fn sync_user_theme() {
   effect.before_paint(fn(dispatch, _) { dispatch(UserThemeSynchronized) })
 }
 
+fn user_fetch_products() {
+  effect.from(fn(d) { d(UserFetchedProducts) })
+}
+
 pub type Msg {
   UserNavigatedTo(route: route.Route)
   UserSubmittedSignUpForm(form: List(#(String, String)))
@@ -76,10 +96,12 @@ pub type Msg {
   UserClickedSignOut
   UserChangedTheme(theme: theme.Theme)
   UserThemeSynchronized
+  UserFetchedProducts
   ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignIn(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignOut(Result(response.Response(String), rsvp.Error))
   ApiReturnedCreateProduct(Result(response.Response(String), rsvp.Error))
+  ApiReturnedProducts(Result(response.Response(String), rsvp.Error))
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
@@ -87,10 +109,17 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     _, UserNavigatedTo(route:) -> {
       let effect = case route {
         route.Account -> sync_user_theme()
+        route.Products(..) -> user_fetch_products()
         _ -> effect.none()
       }
 
       #(Model(..model, route:), effect)
+    }
+    route.Products(..), UserFetchedProducts -> {
+      #(
+        Model(..model, route: route.Products(state: network.Loading)),
+        product.products_get(ApiReturnedProducts),
+      )
     }
     route.SignUp(..) as sign_up, UserSubmittedSignUpForm(form:) -> {
       case auth.decode_sign_up_form(form) {
@@ -165,7 +194,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           route: route.SignUp(..sign_up, state: network.Success(Nil)),
           session:,
         ),
-        navigate(to: route.Products),
+        navigate(to: route.Products(state: network.Loading)),
       )
     }
     route.SignUp(..) as sign_up, ApiReturnedSignUp(Error(e)) -> {
@@ -187,7 +216,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           route: route.SignIn(..sign_in, state: network.Success(Nil)),
           session:,
         ),
-        navigate(to: route.Products),
+        navigate(to: route.Products(state: network.Loading)),
       )
     }
     route.SignIn(..) as sign_in, ApiReturnedSignIn(Error(e)) -> {
@@ -210,7 +239,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
             state: network.Success(Nil),
           ),
         ),
-        navigate(to: route.Products),
+        navigate(to: route.Products(state: network.Loading)),
       )
     }
     route.CreateProduct(..) as create_product,
@@ -234,6 +263,43 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         Model(..model, session: option.None),
         navigate(to: route.SignUp(form: form.new(), state: network.Idle)),
       )
+    }
+    route.Products(..), ApiReturnedProducts(Error(e)) -> {
+      let msg = case e {
+        rsvp.HttpError(e) -> e.body
+        _ -> "something went wrong"
+      }
+
+      #(
+        Model(..model, route: route.Products(state: network.Err(msg:))),
+        effect.none(),
+      )
+    }
+    route.Products(..), ApiReturnedProducts(Ok(res)) -> {
+      let products = shared_product.decode_products_by_status(res.body)
+
+      case products {
+        Error(err) -> {
+          #(
+            Model(
+              ..model,
+              route: route.Products(
+                state: network.Err(msg: string.inspect(err)),
+              ),
+            ),
+            effect.none(),
+          )
+        }
+        Ok(products) -> {
+          #(
+            Model(
+              ..model,
+              route: route.Products(state: network.Success(products)),
+            ),
+            effect.none(),
+          )
+        }
+      }
     }
     _, UserChangedTheme(theme) -> {
       let assert Ok(root) = document.query_selector("html")
@@ -310,8 +376,8 @@ pub fn view(model: Model) -> element.Element(Msg) {
         on_submit: UserSubmittedCreateProductForm,
       )
     }
-    route.Products, option.Some(..) -> {
-      product.page(UserClickedSignOut)
+    route.Products(state), option.Some(..) -> {
+      product.page(state:)
     }
     route.NotFound(_uri), _ -> {
       html.h1([], [html.text("not found")])
@@ -336,17 +402,25 @@ pub fn view(model: Model) -> element.Element(Msg) {
 }
 
 type Hydration {
-  Hydration(session: String)
+  Hydration(session: String, products_by_status: String)
 }
 
 fn hydration_payload() {
   let session = {
-    document.query_selector("#session")
+    document.query_selector(string.concat(["#", context.session_hydration_key]))
     |> result.map(browser_element.inner_text)
     |> result.unwrap("")
   }
 
-  Hydration(session:)
+  let products_by_status = {
+    document.query_selector(
+      string.concat(["#", shared_product.products_by_status_hydration_key]),
+    )
+    |> result.map(browser_element.inner_text)
+    |> result.unwrap("")
+  }
+
+  Hydration(session:, products_by_status:)
 }
 //BUG: navigation not changing the url
 //TODO: data validation

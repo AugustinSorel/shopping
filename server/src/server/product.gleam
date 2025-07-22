@@ -1,28 +1,14 @@
 import gleam/dynamic
 import gleam/dynamic/decode
+import gleam/list
 import gleam/option
 import gleam/result
-import gleam/time/timestamp
+import gleam/string
 import pog
 import server/error
 import shared/product
 
-pub type Product {
-  Product(
-    id: Int,
-    user_id: Int,
-    title: String,
-    quantity: Int,
-    urgent: Bool,
-    location: option.Option(String),
-    bought_at: option.Option(timestamp.Timestamp),
-    created_at: timestamp.Timestamp,
-    updated_at: timestamp.Timestamp,
-  )
-}
-
 pub fn decode_create_product(json: dynamic.Dynamic) {
-  echo json
   let res = {
     decode.run(json, create_product_decoder())
     |> result.map_error(fn(e) {
@@ -74,6 +60,34 @@ pub fn insert(
   }
 }
 
+pub fn get_all(db: pog.Connection) {
+  let query = {
+    "select * from products as p order by p.urgent desc, p.updated_at desc"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.returning(product_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, products)) -> Ok(products)
+    Error(_) -> Error(error.Internal(msg: "fetching all products failed"))
+  }
+}
+
+pub fn get_by_purchase_status(db: pog.Connection) {
+  use products <- result.try(get_all(db))
+
+  let products_by_purchased_status = {
+    list.partition(products, fn(p) { option.is_some(p.bought_at) })
+  }
+
+  let #(purchased, unpurchased) = products_by_purchased_status
+
+  Ok(product.ProductsByStatus(purchased:, unpurchased:))
+}
+
 fn product_row_decoder() {
   use id <- decode.field(0, decode.int)
   use user_id <- decode.field(1, decode.int)
@@ -85,15 +99,15 @@ fn product_row_decoder() {
   use created_at <- decode.field(7, pog.timestamp_decoder())
   use updated_at <- decode.field(8, pog.timestamp_decoder())
 
-  decode.success(Product(
+  decode.success(product.Product(
     id:,
     user_id:,
     title:,
     quantity:,
     location:,
     urgent:,
-    bought_at:,
-    created_at:,
-    updated_at:,
+    bought_at: option.map(bought_at, string.inspect),
+    created_at: string.inspect(created_at),
+    updated_at: string.inspect(updated_at),
   ))
 }

@@ -2,9 +2,12 @@ import client/icon
 import client/network
 import client/view
 import formal/form
+import gleam/int
 import gleam/json
+import gleam/list
 import gleam/option
 import gleam/result
+import gleam/string
 import lustre/attribute
 import lustre/element
 import lustre/element/html
@@ -12,11 +15,164 @@ import lustre/event
 import rsvp
 import shared/product
 
-pub fn page(sign_out_handler) {
+pub fn products_get(handle_response) {
+  rsvp.get("/products", rsvp.expect_ok_response(handle_response))
+}
+
+pub fn page(state state: network.State(product.ProductsByStatus)) {
   element.fragment([
-    html.h1([], [html.text("/products")]),
-    html.button([event.on_click(sign_out_handler)], [html.text("sign out")]),
+    html.header([attribute.class("max-w-app mx-auto my-10")], [
+      html.h1(
+        [attribute.class("text-2xl font-semibold first-letter:capitalize")],
+        [html.text("shopping")],
+      ),
+    ]),
+    html.main([attribute.class("mx-auto max-w-xl space-y-20")], [
+      case state {
+        network.Err(msg:) ->
+          view.alert(view.Destructive, [], [
+            icon.circle_alert([]),
+            view.alert_title([], [html.text("something went wrong")]),
+            view.alert_description([], [html.text(msg)]),
+          ])
+        network.Idle -> element.none()
+        network.Loading -> view.spinner([], icon.Small)
+        network.Success(data:) -> by_purchased_status(data)
+      },
+    ]),
   ])
+}
+
+pub fn by_purchased_status(products: product.ProductsByStatus) {
+  let unpurchased_length = products.unpurchased |> list.length |> int.to_string
+  let purchased_length = products.purchased |> list.length |> int.to_string
+
+  element.fragment([
+    html.section([attribute.class("mx-auto max-w-xl space-y-10")], [
+      html.h2([], [
+        html.text("to buy "),
+        html.data([attribute.value(unpurchased_length)], [
+          html.text(
+            ["(", unpurchased_length, ")"]
+            |> string.join(with: ""),
+          ),
+        ]),
+      ]),
+      html.ol(
+        [
+          attribute.class(
+            "divide-y divide-surface-container-highest bg-surface-container-lowest rounded-3xl overflow-hidden",
+          ),
+        ],
+        list.map(products.unpurchased, fn(p) { item(p) }),
+      ),
+    ]),
+    html.section([attribute.class("mx-auto max-w-xl space-y-10 mt-20")], [
+      html.h2([], [
+        html.text("bought "),
+        html.data([attribute.value(purchased_length)], [
+          html.text(["(", purchased_length, ")"] |> string.join(with: "")),
+        ]),
+      ]),
+      html.ol(
+        [
+          attribute.class(
+            "divide-y divide-surface-container-highest bg-surface-container-lowest rounded-3xl overflow-hidden opacity-50",
+          ),
+        ],
+        list.map(products.purchased, item),
+      ),
+    ]),
+  ])
+}
+
+fn item(product: product.Product) {
+  html.li(
+    [
+      attribute.class(
+        "flex items-center gap-3 [&>input[type=checkbox]]:ml-auto p-4 transition-colors hover:bg-surface-container group",
+      ),
+    ],
+    [
+      view.avatar(product.title),
+      html.div([], [
+        html.header([attribute.class("flex items-center gap-2")], [
+          html.label(
+            [
+              attribute.class(
+                "cursor-pointer truncate capitalize group-has-[input:checked]:line-through font-semibold decoration-2",
+              ),
+              attribute.for(product.id |> int.to_string),
+            ],
+            [html.text(product.title)],
+          ),
+          case product.urgent {
+            True -> {
+              html.strong(
+                [
+                  attribute.class(
+                    "bg-error-container text-on-error-container w-max rounded-full px-2 py-1 text-xs",
+                  ),
+                ],
+                [html.text("urgent")],
+              )
+            }
+            False -> element.none()
+          },
+        ]),
+        html.dl(
+          [
+            attribute.class(
+              "text-outline flex text-sm [&>dd]:ml-1 [&>dt]:not-first-of-type:ml-2",
+            ),
+          ],
+          [
+            html.dt([], [
+              html.abbr(
+                [attribute.title("quantity"), attribute.class("no-underline")],
+                [html.text("qty: ")],
+              ),
+            ]),
+            html.dd([], [
+              html.data([attribute.value(product.quantity |> int.to_string)], [
+                html.text(product.quantity |> int.to_string),
+              ]),
+            ]),
+            case product.location {
+              option.Some(location) -> {
+                element.fragment([
+                  html.dt([], [html.text("location: ")]),
+                  html.dd([], [html.text(location)]),
+                ])
+              }
+              _ -> element.none()
+            },
+          ],
+        ),
+      ]),
+      view.checkbox([
+        attribute.id(product.id |> int.to_string),
+        attribute.checked(option.is_some(product.bought_at)),
+        case product.bought_at {
+          option.Some(_) -> {
+            attribute.attribute(
+              "hx-delete",
+              string.concat(["/products/", int.to_string(product.id), "/bought"]),
+            )
+          }
+          option.None -> {
+            attribute.attribute(
+              "hx-post",
+              string.concat(["/products/", int.to_string(product.id), "/bought"]),
+            )
+          }
+        },
+        attribute.attribute("hx-target", "closest li"),
+        attribute.attribute("hx-swap", "outerHTML"),
+        attribute.attribute("hx-disabled-elt", "this"),
+      ]),
+    ],
+  )
 }
 
 pub fn create_view(
