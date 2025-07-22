@@ -4,6 +4,7 @@ import client/view
 import formal/form
 import gleam/json
 import gleam/option
+import gleam/result
 import lustre/attribute
 import lustre/element
 import lustre/element/html
@@ -203,14 +204,46 @@ pub fn decode_create_product_form(values: List(#(String, String))) {
         |> form.message("quantity must be under 100"),
       ),
   )
-  |> form.field("location", fn(input) {
-    case input {
-      "" -> Ok(option.None)
-      location -> Ok(option.Some(location))
+  |> form.field(
+    "location",
+    fn(input) {
+      case input {
+        "" -> Ok(option.None)
+        location -> Ok(option.Some(location))
+      }
     }
-  })
+      |> form.and(fn(input) {
+        case input {
+          option.None -> Ok(option.None)
+          option.Some(input) -> {
+            form.must_be_string_longer_than(10)(input)
+            |> result.map(fn(d) { option.Some(d) })
+          }
+        }
+      })
+      |> form.and(if_provided(
+        form.must_be_string_longer_than(3)
+        |> form.message("location must be at least 3 characters"),
+      ))
+      |> form.and(if_provided(
+        form.must_be_string_shorter_than(255)
+        |> form.message("location must be at most 255 characters"),
+      )),
+  )
   |> form.field("urgent", form.bool)
   |> form.finish
+}
+
+fn if_provided(cb) {
+  fn(input: option.Option(a)) {
+    case input {
+      option.None -> Ok(option.None)
+      option.Some(input) -> {
+        cb(input)
+        |> result.map(option.Some)
+      }
+    }
+  }
 }
 
 pub fn create_product_post(form: product.CreateProductInput, handle_response) {
