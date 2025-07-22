@@ -1,12 +1,14 @@
 import client/icon
+import client/network
 import client/theme
 import client/view
 import lustre/attribute
 import lustre/element
 import lustre/element/html
+import lustre/event
 import shared/context
 
-pub fn account_page(children: List(element.Element(a)), user: context.User) {
+pub fn account_view(children: List(element.Element(a)), user: context.User) {
   html.main([attribute.class("max-w-app mx-auto space-y-10")], [
     html.header(
       [
@@ -30,7 +32,11 @@ pub fn account_page(children: List(element.Element(a)), user: context.User) {
   ])
 }
 
-pub fn preference(on_theme_change on_theme_change: fn(theme.Theme) -> a) {
+pub fn preference(
+  on_theme_change on_theme_change: fn(theme.Theme) -> a,
+  sign_out_state sign_out_state: network.State(a),
+  sign_out_on_submit sign_out_on_submit,
+) {
   html.section(
     [attribute.class("bg-surface-container-lowest space-y-3 rounded-3xl p-6")],
     [
@@ -53,6 +59,7 @@ pub fn preference(on_theme_change on_theme_change: fn(theme.Theme) -> a) {
               view.Ghost,
               view.Medium,
               [
+                event.on_click(sign_out_on_submit),
                 attribute.attribute("hx-post", "/sign-out"),
                 attribute.attribute("hx-target", "closest section"),
                 attribute.attribute("hx-swap", "outerHTML"),
@@ -61,7 +68,15 @@ pub fn preference(on_theme_change on_theme_change: fn(theme.Theme) -> a) {
                   "text-error text-md hover:bg-error-container text-md",
                 ),
               ],
-              [html.text("sign out"), view.spinner([], icon.Small)],
+              [
+                html.text("sign out"),
+                {
+                  case sign_out_state {
+                    network.Loading -> view.spinner([], icon.Small)
+                    _ -> element.none()
+                  }
+                },
+              ],
             ),
           ]),
         ],

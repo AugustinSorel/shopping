@@ -40,6 +40,8 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
 
     ["users", "account"] -> user_account(req, ctx)
 
+    ["products", "create"] -> products_create(req, ctx)
+
     _ -> wisp.not_found()
   }
 }
@@ -216,7 +218,31 @@ fn user_account(req: wisp.Request, ctx: web.Ctx) {
 
   use session <- web.auth_guard(ctx)
 
-  [client_user.preference(on_theme_change: client.UserChangedTheme)]
+  [
+    client_user.preference(
+      on_theme_change: client.UserChangedTheme,
+      sign_out_state: network.Idle,
+      sign_out_on_submit: client.UserClickedSignOut,
+    ),
+  ]
+  |> client_user.account_page(session.user)
+  |> web.layout(session: option.Some(session))
+  |> element.to_document_string_tree
+  |> wisp.html_response(200)
+}
+
+fn products_create(req: wisp.Request, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Get)
+
+  use session <- web.auth_guard(ctx)
+
+  [
+    client_user.preference(
+      on_theme_change: client.UserChangedTheme,
+      sign_out_state: network.Idle,
+      sign_out_on_submit: client.UserClickedSignOut,
+    ),
+  ]
   |> client_user.account_page(session.user)
   |> web.layout(session: option.Some(session))
   |> element.to_document_string_tree

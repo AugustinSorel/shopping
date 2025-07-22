@@ -234,8 +234,14 @@ pub fn view(model: Model) -> element.Element(Msg) {
     }
     route.Account as route, option.Some(session) -> {
       element.fragment([
-        user.account_page(
-          [user.preference(on_theme_change: UserChangedTheme)],
+        user.account_view(
+          [
+            user.preference(
+              on_theme_change: UserChangedTheme,
+              sign_out_state: network.Idle,
+              sign_out_on_submit: UserClickedSignOut,
+            ),
+          ],
           session.user,
         ),
         view.footer(route:),
