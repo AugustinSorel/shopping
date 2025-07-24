@@ -1,488 +1,61 @@
-import client/auth
 import client/network
-import client/product
 import client/route
-import client/theme
-import client/user
-import client/view
 import formal/form
-import gleam/http/response
-import gleam/option
-import gleam/result
-import gleam/string
 import lustre
+import lustre/attribute
 import lustre/effect
 import lustre/element
 import lustre/element/html
+import lustre/event
 import modem
-import plinth/browser/document
-import plinth/browser/element as browser_element
-import rsvp
-import shared/auth as shared_auth
-import shared/context
-import shared/product as shared_product
 
 pub fn main() -> Nil {
-  let hydration = hydration_payload()
-
-  let session = {
-    hydration.session |> context.decode_session() |> option.from_result
-  }
-
-  let products_by_status = {
-    hydration.products_by_status
-    |> shared_product.decode_products_by_status()
-    |> option.from_result
-  }
-
-  let flags = Flags(session:, products_by_status:)
-
   let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", flags)
+  let assert Ok(_) = lustre.start(app, "#app", Nil)
 
   Nil
 }
 
 pub type Model {
-  Model(route: route.Route, session: option.Option(context.Session))
+  Model(route: route.Route)
 }
 
-pub type Flags {
-  Flags(
-    session: option.Option(context.Session),
-    products_by_status: option.Option(shared_product.ProductsByStatus),
-  )
-}
-
-fn init(flags: Flags) -> #(Model, effect.Effect(Msg)) {
-  let products_by_status_network = case flags.products_by_status {
-    option.None -> network.Idle
-    option.Some(data) -> network.Success(data:)
-  }
-
+fn init(_) -> #(Model, effect.Effect(Msg)) {
   let route = case modem.initial_uri() {
-    Ok(uri) -> route.from_uri(uri, products_by_status_network)
+    Ok(uri) -> route.from_uri(uri)
     Error(_) -> route.SignUp(form: form.new(), state: network.Idle)
   }
 
-  let model = Model(route:, session: flags.session)
+  let model = Model(route:)
 
-  let effect =
-    effect.batch([
-      modem.init(fn(uri) {
-        uri
-        |> route.from_uri(products_by_status_network)
-        |> UserNavigatedTo
-      }),
-      user.sync_theme(UserThemeSynchronized),
-    ])
-
-  #(model, effect)
+  #(model, effect.none())
 }
 
 pub type Msg {
-  UserNavigatedTo(route: route.Route)
-  UserSubmittedSignUpForm(form: List(#(String, String)))
-  UserSubmittedSignInForm(form: List(#(String, String)))
-  UserSubmittedCreateProductForm(form: List(#(String, String)))
-  UserClickedSignOut
-  UserChangedTheme(theme: theme.Theme)
-  UserThemeSynchronized
-  UserFetchedProducts
-  UserCheckedProduct(checked: Bool, id: Int)
-  ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
-  ApiReturnedSignIn(Result(response.Response(String), rsvp.Error))
-  ApiReturnedSignOut(Result(response.Response(String), rsvp.Error))
-  ApiReturnedCreateProduct(Result(response.Response(String), rsvp.Error))
-  ApiReturnedProducts(Result(response.Response(String), rsvp.Error))
-  ApiReturnedPatchProductBought(Result(response.Response(String), rsvp.Error))
+  UserChangedTheme
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
-    UserNavigatedTo(route:) -> {
-      let effect = case route {
-        route.Account -> user.sync_theme(UserThemeSynchronized)
-        route.Products(..) -> {
-          product.get_products_by_category(UserFetchedProducts)
-        }
-        _ -> effect.none()
-      }
-
-      #(Model(..model, route:), effect)
-    }
-    UserFetchedProducts -> {
-      #(
-        Model(..model, route: route.Products(state: network.Loading)),
-        product.products_get(ApiReturnedProducts),
-      )
-    }
-    UserSubmittedSignUpForm(form:) -> {
-      case model.route {
-        route.SignUp(..) as sign_up -> {
-          case auth.decode_sign_up_form(form) {
-            Ok(shared_auth.SignUpInput(..) as form) -> {
-              #(
-                Model(
-                  ..model,
-                  route: route.SignUp(..sign_up, state: network.Loading),
-                ),
-                auth.sign_up_post(form, ApiReturnedSignUp),
-              )
-            }
-            Error(form) -> {
-              #(
-                Model(..model, route: route.SignUp(form:, state: network.Idle)),
-                effect.none(),
-              )
-            }
-          }
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-    UserSubmittedSignInForm(form:) -> {
-      case model.route {
-        route.SignIn(..) as sign_in -> {
-          case auth.decode_sign_in_form(form) {
-            Ok(shared_auth.SignInInput(..) as form) -> {
-              #(
-                Model(
-                  ..model,
-                  route: route.SignIn(..sign_in, state: network.Loading),
-                ),
-                auth.sign_in_post(form, ApiReturnedSignIn),
-              )
-            }
-            Error(form) -> {
-              #(
-                Model(..model, route: route.SignIn(form:, state: network.Idle)),
-                effect.none(),
-              )
-            }
-          }
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-
-    UserSubmittedCreateProductForm(form:) -> {
-      case model.route {
-        route.CreateProduct(..) as create_product -> {
-          case product.decode_create_product_form(form) {
-            Ok(shared_product.CreateProductInput(..) as form) -> {
-              #(
-                Model(
-                  ..model,
-                  route: route.CreateProduct(
-                    ..create_product,
-                    state: network.Loading,
-                  ),
-                ),
-                product.create_product_post(form, ApiReturnedCreateProduct),
-              )
-            }
-            Error(form) -> {
-              #(
-                Model(
-                  ..model,
-                  route: route.CreateProduct(form:, state: network.Idle),
-                ),
-                effect.none(),
-              )
-            }
-          }
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-    UserCheckedProduct(checked:, id:) -> {
-      case model.route {
-        route.Products(..) -> {
-          let input = shared_product.PatchProductInput(bought: checked)
-          #(
-            model,
-            product.patch_bought(id, input, ApiReturnedPatchProductBought),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-
-    ApiReturnedPatchProductBought(Error(_)) -> {
-      #(model, product.get_products_by_category(UserFetchedProducts))
-    }
-    ApiReturnedPatchProductBought(Ok(_)) -> {
-      #(model, product.get_products_by_category(UserFetchedProducts))
-    }
-
-    ApiReturnedSignUp(Ok(res)) -> {
-      case model.route {
-        route.SignUp(..) as sign_up -> {
-          let session = context.decode_session(res.body) |> option.from_result
-
-          #(
-            Model(
-              route: route.SignUp(..sign_up, state: network.Success(Nil)),
-              session:,
-            ),
-            navigate(to: route.Products(state: network.Loading)),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-    ApiReturnedSignUp(Error(e)) -> {
-      case model.route {
-        route.SignUp(..) as sign_up -> {
-          let msg = case e {
-            rsvp.HttpError(e) -> e.body
-            _ -> "something went wrong"
-          }
-
-          #(
-            Model(
-              ..model,
-              route: route.SignUp(..sign_up, state: network.Err(msg:)),
-            ),
-            effect.none(),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-    ApiReturnedSignIn(Ok(res)) -> {
-      case model.route {
-        route.SignIn(..) as sign_in -> {
-          let session = context.decode_session(res.body) |> option.from_result
-
-          #(
-            Model(
-              route: route.SignIn(..sign_in, state: network.Success(Nil)),
-              session:,
-            ),
-            navigate(to: route.Products(state: network.Loading)),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-    ApiReturnedSignIn(Error(e)) -> {
-      case model.route {
-        route.SignIn(..) as sign_in -> {
-          let msg = case e {
-            rsvp.HttpError(e) -> e.body
-            _ -> "something went wrong"
-          }
-
-          #(
-            Model(
-              ..model,
-              route: route.SignIn(..sign_in, state: network.Err(msg:)),
-            ),
-            effect.none(),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-    ApiReturnedCreateProduct(Ok(_)) -> {
-      case model.route {
-        route.CreateProduct(..) as create_product -> {
-          #(
-            Model(
-              ..model,
-              route: route.CreateProduct(
-                ..create_product,
-                state: network.Success(Nil),
-              ),
-            ),
-            navigate(to: route.Products(state: network.Loading)),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-
-    ApiReturnedCreateProduct(Error(e)) -> {
-      case model.route {
-        route.CreateProduct(..) as create_product -> {
-          let msg = case e {
-            rsvp.HttpError(e) -> e.body
-            _ -> "something went wrong"
-          }
-
-          #(
-            Model(
-              ..model,
-              route: route.CreateProduct(
-                ..create_product,
-                state: network.Err(msg:),
-              ),
-            ),
-            effect.none(),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
-    }
-    ApiReturnedSignOut(Ok(_)) -> {
-      #(
-        Model(..model, session: option.None),
-        navigate(to: route.SignUp(form: form.new(), state: network.Idle)),
-      )
-    }
-    ApiReturnedProducts(Error(e)) -> {
-      let msg = case e {
-        rsvp.HttpError(e) -> e.body
-        _ -> "something went wrong"
-      }
-
-      #(
-        Model(..model, route: route.Products(state: network.Err(msg:))),
-        effect.none(),
-      )
-    }
-    ApiReturnedProducts(Ok(res)) -> {
-      let products = shared_product.decode_products_by_status(res.body)
-
-      case products {
-        Error(err) -> {
-          #(
-            Model(
-              ..model,
-              route: route.Products(
-                state: network.Err(msg: string.inspect(err)),
-              ),
-            ),
-            effect.none(),
-          )
-        }
-        Ok(products) -> {
-          #(
-            Model(
-              ..model,
-              route: route.Products(state: network.Success(products)),
-            ),
-            effect.none(),
-          )
-        }
-      }
-    }
-    UserChangedTheme(theme) -> {
-      let assert Ok(root) = document.query_selector("html")
-
-      let _ = case theme {
-        theme.Dark | theme.Light -> {
-          let _ = theme.save_to_local_storage(theme)
-
-          let theme = theme.to_string(theme)
-
-          browser_element.set_attribute(root, "data-theme", theme)
-        }
-        theme.Auto -> {
-          let _ = theme.clear_local_storage()
-
-          browser_element.set_attribute(root, "data-theme", "")
-        }
-      }
+    UserChangedTheme -> {
+      echo "THEME CHANGED"
 
       #(model, effect.none())
-    }
-    UserThemeSynchronized -> {
-      let theme = theme.get_from_local_storage()
-
-      let _ =
-        { "input[value='" <> theme.to_string(theme) <> "']" }
-        |> document.query_selector()
-        |> result.map(browser_element.set_attribute(_, "checked", "true"))
-
-      #(model, effect.none())
-    }
-    ApiReturnedSignOut(Error(_)) -> {
-      #(model, effect.none())
-    }
-    UserClickedSignOut -> {
-      #(model, auth.sign_out_post(ApiReturnedSignOut))
     }
   }
 }
 
-fn navigate(to route: route.Route) -> effect.Effect(Msg) {
-  effect.from(fn(dispatch) { dispatch(UserNavigatedTo(route:)) })
-}
-
-pub fn view(model: Model) -> element.Element(Msg) {
-  let children = case model.route {
-    route.SignIn(form:, state:) -> {
-      let assert option.None = model.session
-
-      auth.sign_in_view(form:, state:, on_submit: UserSubmittedSignInForm)
-    }
-    route.SignUp(form:, state:) -> {
-      let assert option.None = model.session
-
-      auth.sign_up_view(form:, state:, on_submit: UserSubmittedSignUpForm)
-    }
-    route.Account -> {
-      let assert option.Some(session) = model.session
-
-      user.account_view(
-        [
-          user.preference(
-            on_theme_change: UserChangedTheme,
-            sign_out_state: network.Idle,
-            sign_out_on_submit: UserClickedSignOut,
-          ),
-        ],
-        session.user,
-      )
-    }
-    route.CreateProduct(form:, state:) -> {
-      let assert option.Some(_session) = model.session
-
-      product.create_view(
-        form:,
-        state:,
-        on_submit: UserSubmittedCreateProductForm,
-      )
-    }
-    route.Products(state) -> {
-      let assert option.Some(_session) = model.session
-
-      product.page(state:, on_check: UserCheckedProduct)
-    }
-    route.NotFound(_uri) -> {
-      html.h1([], [html.text("not found")])
-    }
-  }
-
-  html.div([], [
-    children,
-    view.footer(route: model.route, session: model.session),
+pub fn view(_model: Model) -> element.Element(Msg) {
+  element.fragment([
+    // html.div([], [
+    account_view(UserChangedTheme),
+    html.footer([], [html.text("footer")]),
   ])
 }
 
-type Hydration {
-  Hydration(session: String, products_by_status: String)
+fn account_view(on_theme_change) {
+  html.main([attribute.class("max-w-app mx-auto space-y-10")], [
+    html.button([event.on_click(on_theme_change)], [html.text("click")]),
+    html.button([event.on_click(on_theme_change)], [html.text("click 2")]),
+  ])
 }
-
-fn hydration_payload() {
-  let session = {
-    document.query_selector(string.concat(["#", context.session_hydration_key]))
-    |> result.map(browser_element.inner_text)
-    |> result.unwrap("")
-  }
-
-  let products_by_status = {
-    document.query_selector(
-      string.concat(["#", shared_product.products_by_status_hydration_key]),
-    )
-    |> result.map(browser_element.inner_text)
-    |> result.unwrap("")
-  }
-
-  Hydration(session:, products_by_status:)
-}
-//BUG: navigation not changing the url
-//TODO: data validation

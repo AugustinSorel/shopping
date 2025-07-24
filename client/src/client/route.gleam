@@ -23,14 +23,11 @@ pub fn to_href(route: Route) {
   }
 }
 
-pub fn from_uri(
-  uri: uri.Uri,
-  products_by_status_network: network.State(product.ProductsByStatus),
-) -> Route {
+pub fn from_uri(uri: uri.Uri) -> Route {
   case uri.path_segments(uri.path) {
     ["sign-up"] -> SignUp(form: form.new(), state: network.Idle)
     ["sign-in"] -> SignIn(form: form.new(), state: network.Idle)
-    [] | [""] -> Products(state: products_by_status_network)
+    [] | [""] -> Products(state: network.Idle)
     ["products", "create"] -> {
       CreateProduct(
         form: form.initial_values([#("quantity", "1")]),
