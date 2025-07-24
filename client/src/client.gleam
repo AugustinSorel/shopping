@@ -1,13 +1,9 @@
-import client/network
-import client/route
-import formal/form
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element
 import lustre/element/html
 import lustre/event
-import modem
 
 pub fn main() -> Nil {
   let app = lustre.application(init, update, view)
@@ -17,16 +13,11 @@ pub fn main() -> Nil {
 }
 
 pub type Model {
-  Model(route: route.Route)
+  Model
 }
 
 fn init(_) -> #(Model, effect.Effect(Msg)) {
-  let route = case modem.initial_uri() {
-    Ok(uri) -> route.from_uri(uri)
-    Error(_) -> route.SignUp(form: form.new(), state: network.Idle)
-  }
-
-  let model = Model(route:)
+  let model = Model
 
   #(model, effect.none())
 }
