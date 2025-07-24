@@ -74,18 +74,10 @@ fn init(flags: Flags) -> #(Model, effect.Effect(Msg)) {
         |> route.from_uri(products_by_status_network)
         |> UserNavigatedTo
       }),
-      sync_user_theme(),
+      user.sync_theme(UserThemeSynchronized),
     ])
 
   #(model, effect)
-}
-
-fn sync_user_theme() {
-  effect.before_paint(fn(dispatch, _) { dispatch(UserThemeSynchronized) })
-}
-
-fn user_fetch_products() {
-  effect.from(fn(d) { d(UserFetchedProducts) })
 }
 
 pub type Msg {
@@ -97,19 +89,23 @@ pub type Msg {
   UserChangedTheme(theme: theme.Theme)
   UserThemeSynchronized
   UserFetchedProducts
+  UserCheckedProduct(checked: Bool, id: Int)
   ApiReturnedSignUp(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignIn(Result(response.Response(String), rsvp.Error))
   ApiReturnedSignOut(Result(response.Response(String), rsvp.Error))
   ApiReturnedCreateProduct(Result(response.Response(String), rsvp.Error))
   ApiReturnedProducts(Result(response.Response(String), rsvp.Error))
+  ApiReturnedPatchProductBought(Result(response.Response(String), rsvp.Error))
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
     UserNavigatedTo(route:) -> {
       let effect = case route {
-        route.Account -> sync_user_theme()
-        route.Products(..) -> user_fetch_products()
+        route.Account -> user.sync_theme(UserThemeSynchronized)
+        route.Products(..) -> {
+          product.get_products_by_category(UserFetchedProducts)
+        }
         _ -> effect.none()
       }
 
@@ -200,6 +196,26 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(model, effect.none())
       }
     }
+    UserCheckedProduct(checked:, id:) -> {
+      case model.route {
+        route.Products(..) -> {
+          let input = shared_product.PatchProductInput(bought: checked)
+          #(
+            model,
+            product.patch_bought(id, input, ApiReturnedPatchProductBought),
+          )
+        }
+        _ -> #(model, effect.none())
+      }
+    }
+
+    ApiReturnedPatchProductBought(Error(_)) -> {
+      #(model, product.get_products_by_category(UserFetchedProducts))
+    }
+    ApiReturnedPatchProductBought(Ok(_)) -> {
+      #(model, product.get_products_by_category(UserFetchedProducts))
+    }
+
     ApiReturnedSignUp(Ok(res)) -> {
       case model.route {
         route.SignUp(..) as sign_up -> {
@@ -434,7 +450,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
     route.Products(state) -> {
       let assert option.Some(_session) = model.session
 
-      product.page(state:)
+      product.page(state:, on_check: UserCheckedProduct)
     }
     route.NotFound(_uri) -> {
       html.h1([], [html.text("not found")])

@@ -3,10 +3,15 @@ import client/network
 import client/theme
 import client/view
 import lustre/attribute
+import lustre/effect
 import lustre/element
 import lustre/element/html
 import lustre/event
 import shared/context
+
+pub fn sync_theme(response) {
+  effect.before_paint(fn(dispatch, _) { dispatch(response) })
+}
 
 pub fn account_view(children: List(element.Element(a)), user: context.User) {
   html.main([attribute.class("max-w-app mx-auto space-y-10")], [

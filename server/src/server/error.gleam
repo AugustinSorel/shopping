@@ -19,6 +19,7 @@ pub type Error {
   SessionExpired
   SessionSecretInvalid
   ProductValidation(errors: List(Validation))
+  ProductNotFound
 }
 
 pub fn build_response(error: Error) -> wisp.Response {
@@ -83,6 +84,10 @@ pub fn build_response(error: Error) -> wisp.Response {
       |> json.to_string_tree
       |> wisp.json_response(wisp.unprocessable_entity().status)
     }
+    ProductNotFound ->
+      json.object([#("message", json.string("product not found"))])
+      |> json.to_string_tree
+      |> wisp.json_response(wisp.not_found().status)
   }
 }
 

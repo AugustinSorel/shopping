@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/list
@@ -16,9 +17,22 @@ pub fn decode_create_product(json: dynamic.Dynamic) {
     })
   }
 
-  use sign_up <- result.try(res)
+  use input <- result.try(res)
 
-  Ok(sign_up)
+  Ok(input)
+}
+
+pub fn decode_patch_product(json: dynamic.Dynamic) {
+  let res = {
+    decode.run(json, patch_product_decoder())
+    |> result.map_error(fn(e) {
+      error.ProductValidation(errors: error.decode_to_validation(e))
+    })
+  }
+
+  use input <- result.try(res)
+
+  Ok(input)
 }
 
 fn create_product_decoder() -> decode.Decoder(product.CreateProductInput) {
@@ -33,6 +47,12 @@ fn create_product_decoder() -> decode.Decoder(product.CreateProductInput) {
     location:,
     urgent:,
   ))
+}
+
+fn patch_product_decoder() -> decode.Decoder(product.PatchProductInput) {
+  use bought <- decode.field("bought", decode.bool)
+
+  decode.success(product.PatchProductInput(bought:))
 }
 
 pub fn insert(
@@ -72,6 +92,30 @@ pub fn get_all(db: pog.Connection) {
 
   case response {
     Ok(pog.Returned(_rows, products)) -> Ok(products)
+    Error(_) -> Error(error.Internal(msg: "fetching all products failed"))
+  }
+}
+
+pub fn patch_bought(bought: Bool, product_id: Int, db: pog.Connection) {
+  let bought_at = {
+    bool.guard(when: bought, return: "now()", otherwise: fn() { "null" })
+  }
+
+  let query = {
+    "update products set bought_at = "
+    <> bought_at
+    <> " where id = $1 returning *"
+  }
+
+  let response =
+    pog.query(query)
+    |> pog.parameter(pog.int(product_id))
+    |> pog.returning(product_row_decoder())
+    |> pog.execute(db)
+
+  case response {
+    Ok(pog.Returned(_rows, [product, ..])) -> Ok(product)
+    Ok(pog.Returned(_rows, [])) -> Error(error.ProductNotFound)
     Error(_) -> Error(error.Internal(msg: "fetching all products failed"))
   }
 }

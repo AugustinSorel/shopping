@@ -13,6 +13,10 @@ pub type CreateProductInput {
   )
 }
 
+pub type PatchProductInput {
+  PatchProductInput(bought: Bool)
+}
+
 pub type Product {
   Product(
     id: Int,

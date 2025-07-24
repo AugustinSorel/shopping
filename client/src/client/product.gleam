@@ -2,6 +2,8 @@ import client/icon
 import client/network
 import client/view
 import formal/form
+import gleam/http
+import gleam/http/request
 import gleam/int
 import gleam/json
 import gleam/list
@@ -9,17 +11,51 @@ import gleam/option
 import gleam/result
 import gleam/string
 import lustre/attribute
+import lustre/effect
 import lustre/element
 import lustre/element/html
 import lustre/event
 import rsvp
 import shared/product
 
+pub fn get_products_by_category(repsonse) {
+  effect.from(fn(dispatch) { dispatch(repsonse) })
+}
+
 pub fn products_get(handle_response) {
   rsvp.get("/products", rsvp.expect_ok_response(handle_response))
 }
 
-pub fn page(state state: network.State(product.ProductsByStatus)) {
+pub fn patch_bought(
+  product_id: Int,
+  input: product.PatchProductInput,
+  handle_response,
+) {
+  let body = {
+    json.object([#("bought", json.bool(input.bought))]) |> json.to_string
+  }
+
+  let request =
+    request.new()
+    |> request.set_method(http.Patch)
+    |> request.set_host("localhost")
+    |> request.set_port(8080)
+    |> request.set_body(body)
+    |> request.set_scheme(http.Http)
+    |> request.set_header("content-type", "application/json")
+    |> request.set_path(
+      "/products/" <> product_id |> int.to_string <> "/bought",
+    )
+
+  let handler = rsvp.expect_ok_response(handle_response)
+
+  rsvp.send(request, handler)
+}
+
+pub fn page(
+  state state: network.State(product.ProductsByStatus),
+  on_check on_check,
+) {
   element.fragment([
     html.header([attribute.class("max-w-app mx-auto my-10")], [
       html.h1(
@@ -37,13 +73,16 @@ pub fn page(state state: network.State(product.ProductsByStatus)) {
           ])
         network.Idle -> element.none()
         network.Loading -> view.spinner([], icon.Small)
-        network.Success(data:) -> by_purchased_status(data)
+        network.Success(data:) -> by_purchased_status(data, on_check:)
       },
     ]),
   ])
 }
 
-pub fn by_purchased_status(products: product.ProductsByStatus) {
+pub fn by_purchased_status(
+  products: product.ProductsByStatus,
+  on_check on_check,
+) {
   let unpurchased_length = products.unpurchased |> list.length |> int.to_string
   let purchased_length = products.purchased |> list.length |> int.to_string
 
@@ -64,7 +103,7 @@ pub fn by_purchased_status(products: product.ProductsByStatus) {
             "divide-y divide-surface-container-highest bg-surface-container-lowest rounded-3xl overflow-hidden",
           ),
         ],
-        list.map(products.unpurchased, fn(p) { item(p) }),
+        list.map(products.unpurchased, item(_, on_check:)),
       ),
     ]),
     html.section([attribute.class("mx-auto max-w-xl space-y-10 mt-20")], [
@@ -80,13 +119,13 @@ pub fn by_purchased_status(products: product.ProductsByStatus) {
             "divide-y divide-surface-container-highest bg-surface-container-lowest rounded-3xl overflow-hidden opacity-50",
           ),
         ],
-        list.map(products.purchased, item),
+        list.map(products.purchased, item(_, on_check:)),
       ),
     ]),
   ])
 }
 
-fn item(product: product.Product) {
+fn item(product: product.Product, on_check on_check) {
   html.li(
     [
       attribute.class(
@@ -151,6 +190,8 @@ fn item(product: product.Product) {
         ),
       ]),
       view.checkbox([
+        attribute.checked(product.bought_at |> option.is_some),
+        event.on_check(fn(e) { on_check(e, product.id) }),
         attribute.id(product.id |> int.to_string),
         attribute.checked(option.is_some(product.bought_at)),
       ]),

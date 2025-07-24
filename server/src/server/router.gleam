@@ -5,6 +5,7 @@ import formal/form
 import gleam/bit_array
 import gleam/bool
 import gleam/http
+import gleam/int
 import gleam/option
 import gleam/result
 import gleam/string_tree
@@ -45,6 +46,8 @@ pub fn handle_request(req: wisp.Request, ctx: web.Ctx) -> wisp.Response {
     ["users", "account"] -> user_account(req, ctx)
 
     ["products", "create"] -> products_create(req, ctx)
+
+    ["products", product_id, "bought"] -> product_bought(req, product_id, ctx)
 
     _ -> wisp.not_found()
   }
@@ -291,4 +294,33 @@ fn products_create(req: wisp.Request, ctx: web.Ctx) {
   |> web.layout(session: option.Some(session), payload: option.None)
   |> element.to_document_string_tree
   |> wisp.html_response(200)
+}
+
+fn product_bought(req: wisp.Request, product_id: String, ctx: web.Ctx) {
+  use <- wisp.require_method(req, http.Patch)
+
+  use _session <- web.auth_guard(ctx)
+
+  use json <- wisp.require_json(req)
+
+  let input = product.decode_patch_product(json)
+
+  let product_id = {
+    int.parse(product_id)
+    |> result.replace_error(
+      error.ProductValidation(errors: [
+        error.Validation(field: "product_id", msg: "product id is invalid"),
+      ]),
+    )
+  }
+
+  use product_id <- web.require_ok(product_id)
+
+  use input <- web.require_ok(input)
+
+  let product = product.patch_bought(input.bought, product_id, ctx.db)
+
+  use _product <- web.require_ok(product)
+
+  wisp.ok()
 }
