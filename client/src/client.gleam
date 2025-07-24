@@ -457,7 +457,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
     }
   }
 
-  element.fragment([
+  html.div([], [
     children,
     view.footer(route: model.route, session: model.session),
   ])
