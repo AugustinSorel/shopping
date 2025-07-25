@@ -1,6 +1,5 @@
 import client
 import client/network
-import client/route
 import formal/form
 import gleam/bit_array
 import gleam/bool
@@ -63,9 +62,9 @@ fn home(req, ctx) {
 
   use products_by_status <- web.require_ok(products_by_status)
 
-  client.view(client.Model(
-    route: route.Products(state: network.Success(products_by_status)),
-    session: option.Some(session),
+  client.view(client.Products(
+    state: network.Success(products_by_status),
+    session:,
   ))
   |> web.layout(
     session: option.Some(session),
@@ -86,10 +85,7 @@ fn sign_up(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.view(client.Model(
-        route: route.SignUp(form: form.new(), state: network.Idle),
-        session: option.None,
-      ))
+      client.view(client.SignUp(form: form.new(), state: network.Idle))
       |> web.layout(session: option.None, payload: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
@@ -156,10 +152,7 @@ fn sign_in(req: wisp.Request, ctx: web.Ctx) {
     http.Get -> {
       use <- web.guest_only(ctx)
 
-      client.view(client.Model(
-        route: route.SignIn(form: form.new(), state: network.Idle),
-        session: option.None,
-      ))
+      client.view(client.SignIn(form: form.new(), state: network.Idle))
       |> web.layout(session: option.None, payload: option.None)
       |> element.to_document_string_tree
       |> wisp.html_response(200)
@@ -273,7 +266,7 @@ fn user_account(req: wisp.Request, ctx: web.Ctx) {
 
   use session <- web.auth_guard(ctx)
 
-  client.view(client.Model(route: route.Account, session: option.Some(session)))
+  client.view(client.Account(sign_out_state: network.Idle, session:))
   |> web.layout(session: option.Some(session), payload: option.None)
   |> element.to_document_string_tree
   |> wisp.html_response(200)
@@ -284,12 +277,10 @@ fn products_create(req: wisp.Request, ctx: web.Ctx) {
 
   use session <- web.auth_guard(ctx)
 
-  client.view(client.Model(
-    route: route.CreateProduct(
-      form: form.initial_values([#("quantity", "1")]),
-      state: network.Idle,
-    ),
-    session: option.Some(session),
+  client.view(client.CreateProduct(
+    form: form.initial_values([#("quantity", "1")]),
+    state: network.Idle,
+    session:,
   ))
   |> web.layout(session: option.Some(session), payload: option.None)
   |> element.to_document_string_tree

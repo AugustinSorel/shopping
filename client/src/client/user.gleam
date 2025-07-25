@@ -39,7 +39,7 @@ pub fn account_view(children: List(element.Element(a)), user: context.User) {
 
 pub fn preference(
   on_theme_change on_theme_change: fn(theme.Theme) -> a,
-  sign_out_state sign_out_state: network.State(a),
+  sign_out_state sign_out_state: network.State(b),
   sign_out_on_submit sign_out_on_submit,
 ) {
   html.section(
